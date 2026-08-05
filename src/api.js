@@ -5,13 +5,13 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
 })
 
-// Asegurar que todas las URLs terminen en /
 api.interceptors.request.use(async (config) => {
-  // Agregar / al final si no hay query params y no termina en /
-  const [path, query] = config.url.split('?')
-  if (!path.endsWith('/')) {
-    config.url = query ? `${path}/?${query}` : `${path}/`
-  }
+  // Separar path y query string
+  const [path, query] = (config.url || '').split('?')
+
+  // Agregar / al final del path si no lo tiene
+  const pathConBarra = path.endsWith('/') ? path : `${path}/`
+  config.url = query ? `${pathConBarra}?${query}` : pathConBarra
 
   // Adjuntar token de sesión
   const { data } = await supabase.auth.getSession()
