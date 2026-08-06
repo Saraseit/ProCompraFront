@@ -10,45 +10,54 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [nuevo, setNuevo] = useState(null)
+  const [editando, setEditando] = useState(null)
   const [sel, setSel] = useState({})
   const [generando, setGenerando] = useState(false)
 
   useEffect(() => {
-  const timer = setTimeout(async () => {
-    setCargando(true)
-    setError('')
-    try {
-      const reqRes = await api.get('/requerimientos?estado=pendiente')
-      setRequerimientos(reqRes.data)
-      const provRes = await api.get('/proveedores')
-      setProveedores(provRes.data)
-    } catch (e) {
-      setError('Error al cargar datos: ' + (e.response?.data?.detail || e.message))
-    }
-    setCargando(false)
-  }, 300)
-  return () => clearTimeout(timer)
+    const timer = setTimeout(async () => {
+      setCargando(true)
+      setError('')
+      try {
+        const reqRes = await api.get('/requerimientos?estado=pendiente')
+        setRequerimientos(reqRes.data)
+        const provRes = await api.get('/proveedores')
+        setProveedores(provRes.data)
+      } catch (e) {
+        setError('Error al cargar datos: ' + (e.response?.data?.detail || e.message))
+      }
+      setCargando(false)
+    }, 300)
+    return () => clearTimeout(timer)
   }, [])
 
-
-  async function crearRequerimiento(datos) {
-  try {
-    await api.post('/requerimientos', {
-      ...datos,
-      solicitante_id: usuario.id,
-    })
-    setNuevo(null)
-    // Recargar solo requerimientos
+  async function recargarReqs() {
     const reqRes = await api.get('/requerimientos?estado=pendiente')
     setRequerimientos(reqRes.data)
-  } catch (e) {
-    alert('Error al crear: ' + (e.response?.data?.detail || e.message))
   }
+
+  async function crearRequerimiento(datos) {
+    try {
+      await api.post('/requerimientos', { ...datos, solicitante_id: usuario.id })
+      setNuevo(null)
+      await recargarReqs()
+    } catch (e) {
+      alert('Error al crear: ' + (e.response?.data?.detail || e.message))
+    }
   }
-  // Requerimientos seleccionados
+
+  async function editarRequerimiento(id, datos) {
+    try {
+      await api.put(`/requerimientos/${id}`, datos)
+      setEditando(null)
+      await recargarReqs()
+    } catch (e) {
+      alert('Error al editar: ' + (e.response?.data?.detail || e.message))
+    }
+  }
+
   const seleccionados = requerimientos.filter((r) => sel[r.id])
 
-  // Agrupar seleccionados por proveedor
   const grupos = useMemo(() => {
     const g = {}
     seleccionados.forEach((r) => {
@@ -65,14 +74,12 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
     setGenerando(true)
     try {
       for (const grupo of grupos) {
-        // Si no tiene proveedor asignado no podemos crear la orden
         if (grupo.provId === '__sin_proveedor__') {
-          alert(`Los requerimientos sin proveedor no se pueden convertir en orden: ${grupo.items.map(i => i.descripcion).join(', ')}`)
+          alert(`Sin proveedor — no se puede convertir: ${grupo.items.map(i => i.descripcion).join(', ')}`)
           continue
         }
         await api.post('/ordenes', {
           proveedor_id: grupo.provId,
-          creado_por: usuario.id,
           tipo_pago: 'transferencia',
           partidas: grupo.items.map((r) => ({
             req_id: r.id,
@@ -85,10 +92,8 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
         })
       }
       setSel({})
-          // Recargar requerimientos
-          const reqRes = await api.get('/requerimientos?estado=pendiente')
-          setRequerimientos(reqRes.data)
-          if (onOrdenCreada) onOrdenCreada()
+      await recargarReqs()
+      if (onOrdenCreada) onOrdenCreada()
     } catch (e) {
       alert('Error al generar orden: ' + (e.response?.data?.detail || e.message))
     }
@@ -97,6 +102,7 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
 
   const toggle = (id) => setSel((s) => ({ ...s, [id]: !s[id] }))
   const nSel = seleccionados.length
+  const puedeEditar = ['admin', 'compras'].includes(usuario.rol)
 
   if (cargando) return <div style={s.msg}>Cargando requerimientos...</div>
   if (error) return <div style={s.error}>{error}</div>
@@ -127,11 +133,12 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
               <th style={s.th}>Contrato</th>
               <th style={s.th}>Proveedor sugerido</th>
               <th style={{...s.th, textAlign:'right'}}>Precio est.</th>
+              {puedeEditar && <th style={s.th}>Acciones</th>}
             </tr>
           </thead>
           <tbody>
             {requerimientos.length === 0 && (
-              <tr><td colSpan={7} style={s.empty}>No hay requerimientos pendientes.</td></tr>
+              <tr><td colSpan={puedeEditar ? 8 : 7} style={s.empty}>No hay requerimientos pendientes.</td></tr>
             )}
             {requerimientos.map((r) => (
               <tr key={r.id} style={sel[r.id] ? { background:'#FBF3EF' } : {}}>
@@ -144,13 +151,20 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
                 <td style={{...s.td, fontFamily:'monospace', fontSize:12}}>{r.contrato || '—'}</td>
                 <td style={s.td}>{r.proveedor?.nombre || '—'}</td>
                 <td style={{...s.td, textAlign:'right'}}>{money(r.precio_estimado)}</td>
+                {puedeEditar && (
+                  <td style={s.td}>
+                    <button style={s.btnGhost}
+                      onClick={() => setEditando({ ...r, proveedor_sug: r.proveedor_sug || '' })}>
+                      Editar
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Barra de generación */}
       {nSel > 0 && (
         <div style={s.genBar}>
           <div style={{ fontSize:14 }}>
@@ -167,7 +181,7 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
       )}
 
       {nuevo && (
-        <ModalNuevo
+        <ModalReq
           data={nuevo}
           setData={setNuevo}
           proveedores={proveedores}
@@ -175,17 +189,28 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
           onSave={crearRequerimiento}
         />
       )}
+
+      {editando && (
+        <ModalReq
+          data={editando}
+          setData={setEditando}
+          proveedores={proveedores}
+          onClose={() => setEditando(null)}
+          onSave={(datos) => editarRequerimiento(editando.id, datos)}
+        />
+      )}
     </div>
   )
 }
 
-function ModalNuevo({ data, setData, proveedores, onClose, onSave }) {
+function ModalReq({ data, setData, proveedores, onClose, onSave }) {
   const set = (k, v) => setData({ ...data, [k]: v })
+  const esNuevo = !data.id
 
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-        <h3 style={s.h3}>Nuevo requerimiento</h3>
+        <h3 style={s.h3}>{esNuevo ? 'Nuevo requerimiento' : 'Editar requerimiento'}</h3>
 
         <label style={s.label}>Descripción</label>
         <input style={s.input} value={data.descripcion}
@@ -219,13 +244,13 @@ function ModalNuevo({ data, setData, proveedores, onClose, onSave }) {
         </select>
 
         <label style={s.label}>Contrato (opcional)</label>
-        <input style={s.input} value={data.contrato}
+        <input style={s.input} value={data.contrato || ''}
           onChange={(e) => set('contrato', e.target.value)} />
 
         <button style={{...s.btnPrimary, width:'100%', marginTop:12}}
           disabled={!data.descripcion}
           onClick={() => onSave({ ...data, proveedor_sug: data.proveedor_sug || null })}>
-          Guardar requerimiento
+          {esNuevo ? 'Guardar requerimiento' : 'Guardar cambios'}
         </button>
       </div>
     </div>
@@ -252,6 +277,8 @@ const s = {
                 borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
   btnLight: { background:'#fff', color:'#26241D', border:'none', padding:'10px 18px',
               borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
+  btnGhost: { background:'transparent', border:'1px solid #E3DFD5', padding:'5px 10px',
+              borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer' },
   overlay: { position:'fixed', inset:0, background:'rgba(30,28,22,0.5)', display:'flex',
              alignItems:'center', justifyContent:'center', padding:16, zIndex:50 },
   modal: { background:'#fff', borderRadius:16, padding:28, width:'100%', maxWidth:480 },

@@ -58,12 +58,16 @@ export default function Ordenes({ usuario }) {
     }
   }
 
+  async function refrescarOrden(ordenId) {
+    const res = await api.get(`/ordenes/${ordenId}`)
+    setOrdenAbierta(res.data)
+    cargarOrdenes()
+  }
+
   async function cambiarEstado(ordenId, estado, detalle = '') {
     try {
       await api.patch(`/ordenes/${ordenId}/estado`, { estado, detalle })
-      const res = await api.get(`/ordenes/${ordenId}`)
-      setOrdenAbierta(res.data)
-      cargarOrdenes()
+      await refrescarOrden(ordenId)
     } catch (e) {
       alert('Error: ' + (e.response?.data?.detail || e.message))
     }
@@ -71,13 +75,8 @@ export default function Ordenes({ usuario }) {
 
   async function registrarPago(ordenId, pago) {
     try {
-      await api.post(`/ordenes/${ordenId}/pago`, {
-        ...pago,
-        registrado_por: usuario.id,
-      })
-      const res = await api.get(`/ordenes/${ordenId}`)
-      setOrdenAbierta(res.data)
-      cargarOrdenes()
+      await api.post(`/ordenes/${ordenId}/pago`, { ...pago, registrado_por: usuario.id })
+      await refrescarOrden(ordenId)
     } catch (e) {
       alert('Error: ' + (e.response?.data?.detail || e.message))
     }
@@ -86,9 +85,27 @@ export default function Ordenes({ usuario }) {
   async function registrarRecoleccion(ordenId, rec) {
     try {
       await api.post(`/ordenes/${ordenId}/recoleccion`, rec)
-      const res = await api.get(`/ordenes/${ordenId}`)
-      setOrdenAbierta(res.data)
+      await refrescarOrden(ordenId)
+    } catch (e) {
+      alert('Error: ' + (e.response?.data?.detail || e.message))
+    }
+  }
+
+  async function eliminarOrden(ordenId, folio) {
+    if (!confirm(`¿Eliminar la orden #${folio}? Esta acción no se puede deshacer.`)) return
+    try {
+      await api.delete(`/ordenes/${ordenId}`)
+      setOrdenAbierta(null)
       cargarOrdenes()
+    } catch (e) {
+      alert('Error: ' + (e.response?.data?.detail || e.message))
+    }
+  }
+
+  async function actualizarOrden(ordenId, patch) {
+    try {
+      await api.put(`/ordenes/${ordenId}`, patch)
+      await refrescarOrden(ordenId)
     } catch (e) {
       alert('Error: ' + (e.response?.data?.detail || e.message))
     }
@@ -135,22 +152,25 @@ export default function Ordenes({ usuario }) {
           onCambiarEstado={cambiarEstado}
           onPago={registrarPago}
           onRecoleccion={registrarRecoleccion}
+          onEliminar={eliminarOrden}
+          onActualizar={actualizarOrden}
         />
       )}
     </div>
   )
 }
 
-function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecoleccion }) {
+function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecoleccion, onEliminar, onActualizar }) {
   const [pago, setPago] = useState({ fecha_pago: hoy(), referencia: '', metodo: 'transferencia', monto: orden.total })
   const [rec, setRec] = useState({ tipo: 'recoleccion', fecha_programada: hoy(), responsable: '', notas: '', completado: false })
+  const [obs, setObs] = useState(orden.observaciones || '')
+  const [tipoPago, setTipoPago] = useState(orden.tipo_pago || 'transferencia')
   const e = orden.estado
 
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
 
-        {/* Header */}
         <div style={s.modalHead}>
           <div>
             <div style={s.folioBig}>Orden #{orden.folio}</div>
@@ -178,7 +198,8 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
             <thead>
               <tr>
                 <th style={s.th}>Cant.</th><th style={s.th}>Unidad</th>
-                <th style={s.th}>Concepto</th><th style={{...s.th, textAlign:'right'}}>P. Unit.</th>
+                <th style={s.th}>Concepto</th>
+                <th style={{...s.th, textAlign:'right'}}>P. Unit.</th>
                 <th style={{...s.th, textAlign:'right'}}>Importe</th>
               </tr>
             </thead>
@@ -200,8 +221,42 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
             </tfoot>
           </table>
 
+          {/* Editar borrador */}
+          {e === 'borrador' && (
+            <div style={{...s.box, marginTop:14}}>
+              <div style={s.boxTitle}>Detalles de la orden</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                <div>
+                  <label style={s.label}>Tipo de pago</label>
+                  <select style={s.input} value={tipoPago}
+                    onChange={(ev) => setTipoPago(ev.target.value)}
+                    onBlur={() => onActualizar(orden.id, { tipo_pago: tipoPago })}>
+                    {['transferencia','tarjeta_credito','efectivo','personas_morales','gastos_generales'].map((m) =>
+                      <option key={m} value={m}>{m.replace(/_/g,' ')}</option>
+                    )}
+                  </select>
+                </div>
+                <div>
+                  <label style={s.label}>Observaciones</label>
+                  <input style={s.input} value={obs}
+                    onChange={(ev) => setObs(ev.target.value)}
+                    onBlur={() => onActualizar(orden.id, { observaciones: obs })}
+                    placeholder="Notas para el proveedor o autorizador" />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Acciones por estado */}
           <div style={s.acciones}>
+            {/* Eliminar — solo admin, solo borrador o rechazada */}
+            {usuario.rol === 'admin' && ['borrador', 'rechazada'].includes(e) && (
+              <button style={{...s.btnDanger, marginRight:'auto'}}
+                onClick={() => onEliminar(orden.id, orden.folio)}>
+                Eliminar orden
+              </button>
+            )}
+
             {e === 'borrador' && (
               <button style={s.btnPrimary}
                 onClick={() => onCambiarEstado(orden.id, 'autorizacion')}>
@@ -236,7 +291,7 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
                     <select style={s.input} value={pago.metodo}
                       onChange={(ev) => setPago({...pago, metodo: ev.target.value})}>
                       {['transferencia','tarjeta_credito','efectivo','personas_morales','gastos_generales'].map((m) =>
-                        <option key={m} value={m}>{m.replace('_',' ')}</option>
+                        <option key={m} value={m}>{m.replace(/_/g,' ')}</option>
                       )}
                     </select>
                   </div>
@@ -346,7 +401,7 @@ const s = {
   th: { textAlign:'left', padding:'10px 8px', background:'#F4F1EA', color:'#6B6659',
         fontWeight:600, fontSize:11, textTransform:'uppercase' },
   td: { padding:'10px 8px', borderBottom:'1px solid #EFEBE2' },
-  acciones: { display:'flex', gap:10, justifyContent:'flex-end', marginTop:18, flexWrap:'wrap' },
+  acciones: { display:'flex', gap:10, justifyContent:'flex-end', marginTop:18, flexWrap:'wrap', alignItems:'center' },
   pagoBox: { width:'100%', background:'#FCFBF8', border:'1px solid #E3DFD5', borderRadius:10, padding:16 },
   pagoGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:10 },
   pagoInfo: { background:'#DBE7F7', color:'#1F5AA6', padding:'10px 14px', borderRadius:8, fontSize:13, fontWeight:500 },
