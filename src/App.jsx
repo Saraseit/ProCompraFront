@@ -5,6 +5,7 @@ import Requerimientos from './pages/Requerimientos'
 import Ordenes from './pages/Ordenes'
 import Control from './pages/Control'
 import Proveedores from './pages/Proveedores'
+import Usuarios from './pages/Usuarios'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -62,6 +63,7 @@ function App() {
           ['ordenes', 'Órdenes de compra'],
           ['proveedores', 'Proveedores'],
           ...(['admin','compras','pagos'].includes(usuario.rol) ? [['control','Control de gastos']] : []),
+          ...(usuario.rol === 'admin' ? [['usuarios','Usuarios']] : []),
         ].map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
             style={{ border:'none', background:'none', padding:'14px 16px', fontWeight:500,
@@ -83,6 +85,7 @@ function App() {
         {tab === 'ordenes' && <Ordenes usuario={usuario} />}
         {tab === 'proveedores' && <Proveedores usuario={usuario} />}
         {tab === 'control' && ['admin','compras','pagos'].includes(usuario.rol) && <Control />}
+        {tab === 'usuarios' && usuario.rol === 'admin' && <Usuarios usuario={usuario} />}
       </main>
 
     </div>
