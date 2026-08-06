@@ -4,6 +4,7 @@ import Login from './Login'
 import Requerimientos from './pages/Requerimientos'
 import Ordenes from './pages/Ordenes'
 import Control from './pages/Control'
+import Proveedores from './pages/Proveedores'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -11,29 +12,26 @@ function App() {
   const [cargando, setCargando] = useState(true)
   const [tab, setTab] = useState('requerimientos')
 
-  // 1 — Escuchar sesión de Supabase Auth
-    useEffect(() => {
-      supabase.auth.getSession().then(({ data }) => {
-        setSession(data.session)
-        // No quitamos el loading aquí todavía
-      })
-      const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-        setSession(session)
-        setCargando(false)  // Solo quitamos loading cuando Auth confirma el estado
-      })
-      return () => listener.subscription.unsubscribe()
-    }, [])
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session)
+    })
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+      setCargando(false)
+    })
+    return () => listener.subscription.unsubscribe()
+  }, [])
 
-    // 2 — Cuando hay sesión, cargar perfil completo con rol
-    useEffect(() => {
-      if (!session) { setUsuario(null); return }
-      supabase
-        .from('usuarios')
-        .select('id, nombre, correo, rol, activo')
-        .eq('id', session.user.id)
-        .single()
-        .then(({ data }) => { if (data) setUsuario(data) })
-    }, [session])
+  useEffect(() => {
+    if (!session) { setUsuario(null); return }
+    supabase
+      .from('usuarios')
+      .select('id, nombre, correo, rol, activo')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data }) => { if (data) setUsuario(data) })
+  }, [session])
 
   if (cargando) return <div style={{ padding: 40 }}>Cargando...</div>
   if (!session) return <Login />
@@ -42,7 +40,6 @@ function App() {
   return (
     <div style={{ minHeight:'100vh', background:'#FAF8F3', fontFamily:"'Inter', system-ui, sans-serif" }}>
 
-      {/* Header */}
       <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
                        padding:'18px 32px', background:'#fff', borderBottom:'1px solid #E3DFD5' }}>
         <div>
@@ -59,12 +56,11 @@ function App() {
         </div>
       </header>
 
-      {/* Navegación */}
       <nav style={{ display:'flex', gap:4, padding:'0 32px', background:'#fff', borderBottom:'1px solid #E3DFD5' }}>
         {[
           ['requerimientos', 'Requerimientos'],
           ['ordenes', 'Órdenes de compra'],
-          // Control de gastos solo para admin, compras y pagos
+          ['proveedores', 'Proveedores'],
           ...(['admin','compras','pagos'].includes(usuario.rol) ? [['control','Control de gastos']] : []),
         ].map(([k, label]) => (
           <button key={k} onClick={() => setTab(k)}
@@ -77,7 +73,6 @@ function App() {
         ))}
       </nav>
 
-      {/* Contenido */}
       <main style={{ padding:'26px 32px', maxWidth:1180, margin:'0 auto' }}>
         {tab === 'requerimientos' && (
           <Requerimientos
@@ -86,6 +81,7 @@ function App() {
           />
         )}
         {tab === 'ordenes' && <Ordenes usuario={usuario} />}
+        {tab === 'proveedores' && <Proveedores usuario={usuario} />}
         {tab === 'control' && ['admin','compras','pagos'].includes(usuario.rol) && <Control />}
       </main>
 
