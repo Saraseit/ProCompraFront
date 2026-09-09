@@ -144,20 +144,20 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
           </p>
         </div>
         <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-        <input
-          style={{ ...s.select, width:250 }}
-          placeholder="Buscar por folio, proveedor o concepto..."
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-        />
-        <select style={s.select} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-          <option value="">Todas las activas</option>
-          {Object.entries(ESTADOS).map(([k, v]) => (
-            <option key={k} value={k}>
-              {k === 'rechazada' ? 'Rechazadas y eliminadas' : v.label}
-            </option>
-          ))}
-        </select>
+          <input
+            style={{ ...s.select, width:250 }}
+            placeholder="Buscar por folio, proveedor o concepto..."
+            value={busqueda}
+            onChange={(e) => setBusqueda(e.target.value)}
+          />
+          <select style={s.select} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+            <option value="">Todas las activas</option>
+            {Object.entries(ESTADOS).map(([k, v]) => (
+              <option key={k} value={k}>
+                {k === 'rechazada' ? 'Rechazadas y eliminadas' : v.label}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
