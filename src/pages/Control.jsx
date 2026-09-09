@@ -1,33 +1,77 @@
 import { useState, useEffect } from 'react'
 import api from '../api'
-import { money, etiquetaMetodo, etiquetaEstado, mensajeError } from '../constants'
+import { money, METODOS_PAGO, etiquetaMetodo, etiquetaEstado, mensajeError } from '../constants'
+
+const FILTROS_VACIOS = { desde: '', hasta: '', proveedor_id: '', tipo_pago: '' }
 
 export default function Control() {
   const [ordenes, setOrdenes] = useState([])
+  const [proveedores, setProveedores] = useState([])
+  const [filtros, setFiltros] = useState(FILTROS_VACIOS)
   const [cargando, setCargando] = useState(true)
+  const [exportando, setExportando] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => {
-    const timer = setTimeout(() => { cargarDatos() }, 300)
-    return () => clearTimeout(timer)
-  }, [])
+  const hayFiltros = Object.values(filtros).some(Boolean)
+
+  const parametros = () => {
+    const p = new URLSearchParams()
+    Object.entries(filtros).forEach(([k, v]) => { if (v) p.append(k, v) })
+    return p.toString()
+  }
 
   async function cargarDatos() {
     setCargando(true)
     setError('')
     try {
-      // Traer solo órdenes pagadas, en recolección o cerradas
-      const [pagadas, recoleccion, cerradas] = await Promise.all([
-        api.get('/ordenes?estado=pagada'),
-        api.get('/ordenes?estado=recoleccion'),
-        api.get('/ordenes?estado=cerrada'),
-      ])
-      setOrdenes([...pagadas.data, ...recoleccion.data, ...cerradas.data])
+      const qs = parametros()
+      const res = await api.get(`/reportes/gastos${qs ? `?${qs}` : ''}`)
+      setOrdenes(res.data)
     } catch (e) {
       setError('Error al cargar datos: ' + mensajeError(e))
     }
     setCargando(false)
   }
+
+  // Los filtros se aplican con un respiro para no lanzar una petición por tecla.
+  useEffect(() => {
+    const timer = setTimeout(() => { cargarDatos() }, 300)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtros])
+
+  useEffect(() => {
+    api.get('/proveedores')
+      .then((res) => setProveedores(res.data))
+      .catch(() => setProveedores([]))
+  }, [])
+
+  async function exportarExcel() {
+    setExportando(true)
+    try {
+      const qs = parametros()
+      const res = await api.get(`/reportes/gastos/excel${qs ? `?${qs}` : ''}`,
+        { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `gasto-ejercido-${new Date().toISOString().slice(0, 10)}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      // Con responseType blob el cuerpo del error también llega como Blob.
+      let detalle = ''
+      if (e.response?.data instanceof Blob) {
+        try { detalle = JSON.parse(await e.response.data.text()).detail } catch { detalle = '' }
+      }
+      alert('No se pudo exportar: ' + (detalle || mensajeError(e)))
+    }
+    setExportando(false)
+  }
+
+  const set = (k, v) => setFiltros((f) => ({ ...f, [k]: v }))
 
   const total = ordenes.reduce((s, o) => s + (o.total || 0), 0)
   const promedio = ordenes.length ? total / ordenes.length : 0
@@ -45,7 +89,57 @@ export default function Control() {
 
   return (
     <div>
-      <h2 style={s.h2}>Control de gastos</h2>
+      <div style={s.header}>
+        <div>
+          <h2 style={s.h2}>Control de gastos</h2>
+          <p style={s.help}>
+            Órdenes pagadas, por recolectar y cerradas. El rango filtra por fecha de la orden.
+          </p>
+        </div>
+        <button style={{ ...s.btnPrimary, opacity: exportando ? 0.5 : 1 }}
+          disabled={exportando || ordenes.length === 0}
+          onClick={exportarExcel}>
+          {exportando ? 'Generando...' : 'Exportar a Excel'}
+        </button>
+      </div>
+
+      <div style={s.filtros}>
+        <div>
+          <label style={s.label}>Desde</label>
+          <input type="date" style={s.input} value={filtros.desde}
+            onChange={(e) => set('desde', e.target.value)} />
+        </div>
+        <div>
+          <label style={s.label}>Hasta</label>
+          <input type="date" style={s.input} value={filtros.hasta}
+            onChange={(e) => set('hasta', e.target.value)} />
+        </div>
+        <div>
+          <label style={s.label}>Proveedor</label>
+          <select style={s.input} value={filtros.proveedor_id}
+            onChange={(e) => set('proveedor_id', e.target.value)}>
+            <option value="">Todos</option>
+            {proveedores.map((p) => (
+              <option key={p.id} value={p.id}>{p.nombre}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label style={s.label}>Tipo de pago</label>
+          <select style={s.input} value={filtros.tipo_pago}
+            onChange={(e) => set('tipo_pago', e.target.value)}>
+            <option value="">Todos</option>
+            {METODOS_PAGO.map(([valor, etiqueta]) => (
+              <option key={valor} value={valor}>{etiqueta}</option>
+            ))}
+          </select>
+        </div>
+        <button style={{ ...s.btnGhost, opacity: hayFiltros ? 1 : 0.45 }}
+          disabled={!hayFiltros}
+          onClick={() => setFiltros(FILTROS_VACIOS)}>
+          Limpiar
+        </button>
+      </div>
 
       {cargando && <div style={s.msg}>Cargando...</div>}
 
@@ -53,7 +147,7 @@ export default function Control() {
       <div style={s.kpis}>
         <div style={s.kpi}>
           <div style={s.kpiV}>{ordenes.length}</div>
-          <div style={s.kpiL}>Órdenes pagadas</div>
+          <div style={s.kpiL}>{hayFiltros ? 'Órdenes filtradas' : 'Órdenes con gasto'}</div>
         </div>
         <div style={s.kpi}>
           <div style={s.kpiV}>{money(total)}</div>
@@ -129,7 +223,19 @@ export default function Control() {
 }
 
 const s = {
-  h2: { fontSize:22, fontWeight:600, margin:'0 0 16px', color:'#26241D' },
+  h2: { fontSize:22, fontWeight:600, margin:0, color:'#26241D' },
+  help: { fontSize:13, color:'#8A8577', marginTop:4 },
+  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
+            marginBottom:14, gap:16, flexWrap:'wrap' },
+  filtros: { display:'flex', gap:12, alignItems:'flex-end', flexWrap:'wrap', marginBottom:18,
+             background:'#fff', border:'1px solid #E3DFD5', borderRadius:12, padding:14 },
+  label: { display:'block', fontSize:12, color:'#8A8577', marginBottom:5, fontWeight:500 },
+  input: { border:'1px solid #E3DFD5', borderRadius:8, padding:'8px 10px', fontSize:13,
+           minWidth:150, boxSizing:'border-box' },
+  btnPrimary: { background:'#26241D', color:'#fff', border:'none', padding:'10px 16px',
+                borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
+  btnGhost: { background:'transparent', border:'1px solid #E3DFD5', padding:'8px 14px',
+              borderRadius:8, fontSize:13, fontWeight:500, cursor:'pointer' },
   msg: { padding:20, color:'#8A8577' },
   error: { padding:20, background:'#F7DEDE', color:'#B03A3A', borderRadius:8 },
   empty: { textAlign:'center', color:'#A8A395', padding:26 },

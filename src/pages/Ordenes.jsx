@@ -14,11 +14,11 @@ function Badge({ estado }) {
   )
 }
 
-export default function Ordenes({ usuario }) {
+export default function Ordenes({ usuario, filtroInicial = '' }) {
   const [ordenes, setOrdenes] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
-  const [filtro, setFiltro] = useState('')
+  const [filtro, setFiltro] = useState(filtroInicial)
   const [busqueda, setBusqueda] = useState('')
   const [ordenAbierta, setOrdenAbierta] = useState(null)
 
@@ -90,6 +90,27 @@ export default function Ordenes({ usuario }) {
       cargarOrdenes()
     } catch (e) {
       alert('Error: ' + mensajeError(e))
+    }
+  }
+
+  async function descargarPdf(orden) {
+    try {
+      const res = await api.get(`/ordenes/${orden.id}/pdf`, { responseType: 'blob' })
+      const url = URL.createObjectURL(res.data)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `orden-${orden.folio}.pdf`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      // Con responseType blob el cuerpo del error también llega como Blob.
+      let detalle = ''
+      if (e.response?.data instanceof Blob) {
+        try { detalle = JSON.parse(await e.response.data.text()).detail } catch { detalle = '' }
+      }
+      alert('No se pudo generar el PDF: ' + (detalle || mensajeError(e)))
     }
   }
 
@@ -174,13 +195,14 @@ export default function Ordenes({ usuario }) {
           onRecoleccion={registrarRecoleccion}
           onEliminar={eliminarOrden}
           onActualizar={actualizarOrden}
+          onDescargarPdf={descargarPdf}
         />
       )}
     </div>
   )
 }
 
-function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecoleccion, onEliminar, onActualizar }) {
+function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecoleccion, onEliminar, onActualizar, onDescargarPdf }) {
   const [pago, setPago] = useState({ fecha_pago: hoy(), referencia: '', metodo: 'transferencia', monto: orden.total })
   const [rec, setRec] = useState({ tipo: 'recoleccion', fecha_programada: hoy(), responsable: '', notas: '', completado: false })
   const [obs, setObs] = useState(orden.observaciones || '')
@@ -199,6 +221,9 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
             </div>
           </div>
           <div style={{ display:'flex', gap:10, alignItems:'center' }}>
+            <button style={s.btnPdf} onClick={() => onDescargarPdf(orden)}>
+              Descargar PDF
+            </button>
             <Badge estado={orden.estado} />
             <button style={s.btnX} onClick={onClose}>✕</button>
           </div>
@@ -445,4 +470,6 @@ const s = {
   btnDanger: { background:'#fff', color:'#B03A3A', border:'1px solid #E9C9C9', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
   btnGhost: { background:'transparent', border:'1px solid #E3DFD5', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
   btnX: { border:'none', background:'#F4F1EA', width:30, height:30, borderRadius:8, cursor:'pointer', fontSize:14, color:'#6B6659' },
+  btnPdf: { background:'#fff', color:'#26241D', border:'1px solid #E3DFD5', padding:'7px 13px',
+            borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' },
 }

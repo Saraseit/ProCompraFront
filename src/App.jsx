@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from './supabaseClient'
 import Login from './Login'
+import Inicio from './pages/Inicio'
 import Requerimientos from './pages/Requerimientos'
 import Ordenes from './pages/Ordenes'
 import Control from './pages/Control'
@@ -11,7 +12,13 @@ function App() {
   const [session, setSession] = useState(null)
   const [usuario, setUsuario] = useState(null)
   const [cargando, setCargando] = useState(true)
-  const [tab, setTab] = useState('requerimientos')
+  const [tab, setTab] = useState('inicio')
+  const [filtroOrdenes, setFiltroOrdenes] = useState('')
+
+  const irA = (destino, filtro = '') => {
+    setFiltroOrdenes(filtro)
+    setTab(destino)
+  }
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -59,6 +66,7 @@ function App() {
 
       <nav style={{ display:'flex', gap:4, padding:'0 32px', background:'#fff', borderBottom:'1px solid #E3DFD5' }}>
         {[
+          ['inicio', 'Inicio'],
           ['requerimientos', 'Requerimientos'],
           ['ordenes', 'Órdenes de compra'],
           ['proveedores', 'Proveedores'],
@@ -76,13 +84,14 @@ function App() {
       </nav>
 
       <main style={{ padding:'26px 32px', maxWidth:1180, margin:'0 auto' }}>
+        {tab === 'inicio' && <Inicio usuario={usuario} onIr={irA} />}
         {tab === 'requerimientos' && (
           <Requerimientos
             usuario={usuario}
-            onOrdenCreada={() => setTab('ordenes')}
+            onOrdenCreada={() => irA('ordenes', 'borrador')}
           />
         )}
-        {tab === 'ordenes' && <Ordenes usuario={usuario} />}
+        {tab === 'ordenes' && <Ordenes usuario={usuario} filtroInicial={filtroOrdenes} />}
         {tab === 'proveedores' && <Proveedores usuario={usuario} />}
         {tab === 'control' && ['admin','compras','pagos'].includes(usuario.rol) && <Control />}
         {tab === 'usuarios' && usuario.rol === 'admin' && <Usuarios usuario={usuario} />}
