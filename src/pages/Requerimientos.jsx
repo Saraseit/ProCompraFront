@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import api from '../api'
+import { money, mensajeError } from '../constants'
 
 const UNIDADES = ["PZA","CAJA","LITRO","KILO","CUBETA","BOTE","CORTE","GALON","MTR","ROLLO","SERVICIO","PAQUETE"]
-const money = (n) => (n || 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" })
 
 export default function Requerimientos({ usuario, onOrdenCreada }) {
   const [requerimientos, setRequerimientos] = useState([])
@@ -24,7 +24,7 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
         const provRes = await api.get('/proveedores')
         setProveedores(provRes.data)
       } catch (e) {
-        setError('Error al cargar datos: ' + (e.response?.data?.detail || e.message))
+        setError('Error al cargar datos: ' + mensajeError(e))
       }
       setCargando(false)
     }, 300)
@@ -42,7 +42,7 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
       setNuevo(null)
       await recargarReqs()
     } catch (e) {
-      alert('Error al crear: ' + (e.response?.data?.detail || e.message))
+      alert('Error al crear: ' + mensajeError(e))
     }
   }
 
@@ -52,7 +52,7 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
       setEditando(null)
       await recargarReqs()
     } catch (e) {
-      alert('Error al editar: ' + (e.response?.data?.detail || e.message))
+      alert('Error al editar: ' + mensajeError(e))
     }
   }
 
@@ -72,12 +72,9 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
   async function generarOrdenes() {
     if (seleccionados.length === 0) return
     setGenerando(true)
+    let creadas = 0
     try {
       for (const grupo of grupos) {
-        if (grupo.provId === '__sin_proveedor__') {
-          alert(`Sin proveedor — no se puede convertir: ${grupo.items.map(i => i.descripcion).join(', ')}`)
-          continue
-        }
         await api.post('/ordenes', {
           proveedor_id: grupo.provId,
           tipo_pago: 'transferencia',
@@ -90,19 +87,34 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
             contrato: r.contrato || null,
           })),
         })
+        creadas++
       }
-      setSel({})
-      await recargarReqs()
       if (onOrdenCreada) onOrdenCreada()
     } catch (e) {
-      alert('Error al generar orden: ' + (e.response?.data?.detail || e.message))
+      // Las órdenes ya creadas no se revierten: se avisa cuántas quedaron.
+      alert(
+        `Se generaron ${creadas} de ${grupos.length} orden(es).\n` +
+        `La orden de ${grupos[creadas]?.provNombre || '—'} falló: ${mensajeError(e)}`
+      )
+    } finally {
+      setSel({})
+      await recargarReqs()
+      setGenerando(false)
     }
-    setGenerando(false)
   }
 
   const toggle = (id) => setSel((s) => ({ ...s, [id]: !s[id] }))
   const nSel = seleccionados.length
   const puedeEditar = ['admin', 'compras'].includes(usuario.rol)
+
+  const todosSeleccionados = requerimientos.length > 0 && nSel === requerimientos.length
+  const alternarTodos = () =>
+    setSel(todosSeleccionados
+      ? {}
+      : Object.fromEntries(requerimientos.map((r) => [r.id, true])))
+
+  const grupoSinProveedor = grupos.find((g) => g.provId === '__sin_proveedor__')
+  const puedeGenerar = nSel > 0 && !grupoSinProveedor && !generando
 
   if (cargando) return <div style={s.msg}>Cargando requerimientos...</div>
   if (error) return <div style={s.error}>{error}</div>
@@ -112,21 +124,65 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
       <div style={s.header}>
         <div>
           <h2 style={s.h2}>Requerimientos</h2>
-          <p style={s.help}>Selecciona los que quieres convertir en órdenes — se agrupan por proveedor automáticamente.</p>
+          <p style={s.help}>
+            Marca los requerimientos que quieras convertir en órdenes de compra.
+            Se agrupan automáticamente en una orden por proveedor.
+          </p>
         </div>
-        <button style={s.btnPrimary} onClick={() => setNuevo({
-          descripcion: '', cantidad: 1, unidad: 'PZA',
-          precio_estimado: 0, contrato: '', proveedor_sug: '',
-        })}>
-          + Nuevo requerimiento
-        </button>
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+          <button style={s.btnGhostLg} onClick={() => setNuevo({
+            descripcion: '', cantidad: 1, unidad: 'PZA',
+            precio_estimado: 0, contrato: '', proveedor_sug: '',
+          })}>
+            + Nuevo requerimiento
+          </button>
+          <button
+            style={{ ...s.btnPrimary,
+                     opacity: puedeGenerar ? 1 : 0.45,
+                     cursor: puedeGenerar ? 'pointer' : 'not-allowed' }}
+            disabled={!puedeGenerar}
+            title={nSel === 0
+              ? 'Marca al menos un requerimiento en la tabla'
+              : grupoSinProveedor
+                ? 'Hay requerimientos seleccionados sin proveedor sugerido'
+                : 'Generar las órdenes de compra'}
+            onClick={generarOrdenes}>
+            {generando
+              ? 'Generando...'
+              : `Generar órdenes de compra${nSel > 0 ? ` (${nSel})` : ''}`}
+          </button>
+        </div>
       </div>
+
+      {nSel > 0 && (
+        <div style={grupoSinProveedor ? s.resumenAviso : s.resumen}>
+          {grupoSinProveedor ? (
+            <>
+              <strong>Falta el proveedor.</strong> No se puede generar una orden para{' '}
+              {grupoSinProveedor.items.map((i) => i.descripcion).join(', ')}.
+              Edita esos requerimientos y asígnales un proveedor sugerido, o quítalos de la selección.
+            </>
+          ) : (
+            <>
+              <strong>{nSel}</strong> requerimiento(s) seleccionado(s) → se crearán{' '}
+              <strong>{grupos.length}</strong> orden(es):{' '}
+              {grupos.map((g) => `${g.provNombre} (${g.items.length})`).join(' · ')}
+            </>
+          )}
+        </div>
+      )}
 
       <div style={s.card}>
         <table style={s.table}>
           <thead>
             <tr>
-              <th style={{...s.th, width:34}}></th>
+              <th style={{...s.th, width:78}}>
+                <label style={s.thCheck} title="Seleccionar todos">
+                  <input type="checkbox" checked={todosSeleccionados}
+                    onChange={alternarTodos} />
+                  Generar
+                </label>
+              </th>
               <th style={s.th}>Descripción</th>
               <th style={{...s.th, textAlign:'right'}}>Cant.</th>
               <th style={s.th}>Unidad</th>
@@ -165,21 +221,6 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
         </table>
       </div>
 
-      {nSel > 0 && (
-        <div style={s.genBar}>
-          <div style={{ fontSize:14 }}>
-            <strong>{nSel}</strong> requerimiento(s) → generará{' '}
-            <strong>{grupos.length}</strong> orden(es):{' '}
-            <span style={{ color:'#A8A395' }}>
-              {grupos.map((g) => `${g.provNombre} (${g.items.length})`).join(' · ')}
-            </span>
-          </div>
-          <button style={s.btnLight} disabled={generando} onClick={generarOrdenes}>
-            {generando ? 'Generando...' : 'Generar órdenes de compra →'}
-          </button>
-        </div>
-      )}
-
       {nuevo && (
         <ModalReq
           data={nuevo}
@@ -207,13 +248,32 @@ function ModalReq({ data, setData, proveedores, onClose, onSave }) {
   const set = (k, v) => setData({ ...data, [k]: v })
   const esNuevo = !data.id
 
+  const descripcion = (data.descripcion || '').trim()
+  const cantidad = Number(data.cantidad)
+  const precio = Number(data.precio_estimado)
+  const errores = []
+  if (!descripcion) errores.push('La descripción es obligatoria.')
+  if (!(cantidad > 0)) errores.push('La cantidad debe ser mayor que cero.')
+  if (!(precio >= 0)) errores.push('El precio estimado no puede ser negativo.')
+  const puedeGuardar = errores.length === 0
+
+  const guardar = () => onSave({
+    ...data,
+    descripcion,
+    cantidad,
+    precio_estimado: precio,
+    contrato: (data.contrato || '').trim() || null,
+    proveedor_sug: data.proveedor_sug || null,
+  })
+
   return (
     <div style={s.overlay} onClick={onClose}>
       <div style={s.modal} onClick={(e) => e.stopPropagation()}>
         <h3 style={s.h3}>{esNuevo ? 'Nuevo requerimiento' : 'Editar requerimiento'}</h3>
 
-        <label style={s.label}>Descripción</label>
+        <label style={s.label}>Descripción *</label>
         <input style={s.input} value={data.descripcion}
+          placeholder="Qué se necesita comprar"
           onChange={(e) => set('descripcion', e.target.value)} autoFocus />
 
         <div style={s.row}>
@@ -237,19 +297,25 @@ function ModalReq({ data, setData, proveedores, onClose, onSave }) {
         </div>
 
         <label style={s.label}>Proveedor sugerido</label>
-        <select style={s.input} value={data.proveedor_sug}
-          onChange={(e) => set('proveedor_sug', e.target.value)}>
-          <option value="">— Ninguno —</option>
-          {proveedores.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-        </select>
+        <ComboProveedor
+          proveedores={proveedores}
+          valor={data.proveedor_sug}
+          onChange={(id) => set('proveedor_sug', id)}
+        />
 
         <label style={s.label}>Contrato (opcional)</label>
         <input style={s.input} value={data.contrato || ''}
           onChange={(e) => set('contrato', e.target.value)} />
 
-        <button style={{...s.btnPrimary, width:'100%', marginTop:12}}
-          disabled={!data.descripcion}
-          onClick={() => onSave({ ...data, proveedor_sug: data.proveedor_sug || null })}>
+        {errores.length > 0 && (
+          <div style={s.avisoError}>{errores[0]}</div>
+        )}
+
+        <button style={{ ...s.btnPrimary, width:'100%', marginTop:12,
+                         opacity: puedeGuardar ? 1 : 0.45,
+                         cursor: puedeGuardar ? 'pointer' : 'not-allowed' }}
+          disabled={!puedeGuardar}
+          onClick={guardar}>
           {esNuevo ? 'Guardar requerimiento' : 'Guardar cambios'}
         </button>
       </div>
@@ -257,8 +323,65 @@ function ModalReq({ data, setData, proveedores, onClose, onSave }) {
   )
 }
 
+function ComboProveedor({ proveedores, valor, onChange }) {
+  const [abierto, setAbierto] = useState(false)
+  const [texto, setTexto] = useState('')
+
+  const seleccionado = proveedores.find((p) => p.id === valor) || null
+  const filtro = texto.trim().toLowerCase()
+  const coincidencias = filtro
+    ? proveedores.filter((p) =>
+        p.nombre.toLowerCase().includes(filtro) ||
+        (p.rfc || '').toLowerCase().includes(filtro))
+    : proveedores
+  const opciones = coincidencias.slice(0, 40)
+
+  const elegir = (p) => {
+    onChange(p ? p.id : '')
+    setTexto('')
+    setAbierto(false)
+  }
+
+  return (
+    <div style={{ position:'relative' }}>
+      <input
+        style={s.input}
+        placeholder={`Escribe para buscar entre ${proveedores.length} proveedores...`}
+        value={abierto ? texto : (seleccionado?.nombre || '')}
+        onFocus={() => { setTexto(''); setAbierto(true) }}
+        // El cierre se retrasa para que alcance a registrarse el clic en una opción.
+        onBlur={() => setTimeout(() => setAbierto(false), 120)}
+        onChange={(e) => { setTexto(e.target.value); setAbierto(true) }}
+      />
+      {abierto && (
+        <div style={s.combo}>
+          <div style={{ ...s.comboItem, color:'#8A8577' }}
+            onMouseDown={() => elegir(null)}>
+            — Ninguno —
+          </div>
+          {opciones.map((p) => (
+            <div key={p.id} style={s.comboItem} onMouseDown={() => elegir(p)}>
+              <span>{p.nombre}</span>
+              {p.rfc && <span style={s.comboRfc}>{p.rfc}</span>}
+            </div>
+          ))}
+          {coincidencias.length === 0 && (
+            <div style={{ ...s.comboItem, color:'#A8A395' }}>Sin coincidencias.</div>
+          )}
+          {coincidencias.length > opciones.length && (
+            <div style={s.comboMas}>
+              +{coincidencias.length - opciones.length} más — sigue escribiendo para acotar.
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const s = {
-  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:16, gap:16 },
+  header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
+            marginBottom:16, gap:16, flexWrap:'wrap' },
   h2: { fontSize:22, fontWeight:600, margin:0, color:'#26241D' },
   h3: { fontSize:18, fontWeight:600, marginTop:0, color:'#26241D' },
   help: { fontSize:13, color:'#8A8577', marginTop:4 },
@@ -270,13 +393,16 @@ const s = {
   empty: { textAlign:'center', color:'#A8A395', padding:26 },
   msg: { padding:40, color:'#8A8577' },
   error: { padding:20, background:'#F7DEDE', color:'#B03A3A', borderRadius:8 },
-  genBar: { position:'sticky', bottom:16, marginTop:18, background:'#26241D', color:'#fff',
-            padding:'16px 20px', borderRadius:12, display:'flex', justifyContent:'space-between',
-            alignItems:'center', gap:16, boxShadow:'0 10px 30px rgba(0,0,0,0.18)', flexWrap:'wrap' },
+  resumen: { marginBottom:12, background:'#FBF3EF', border:'1px solid #EBD9D1',
+             borderRadius:10, padding:'11px 14px', fontSize:13, color:'#6B6659' },
+  resumenAviso: { marginBottom:12, background:'#FBF0DA', border:'1px solid #E8D5A8',
+                  borderRadius:10, padding:'11px 14px', fontSize:13, color:'#7A5B14' },
+  thCheck: { display:'flex', alignItems:'center', gap:6, cursor:'pointer',
+             fontSize:11, textTransform:'uppercase', fontWeight:600, color:'#6B6659' },
   btnPrimary: { background:'#26241D', color:'#fff', border:'none', padding:'10px 16px',
                 borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
-  btnLight: { background:'#fff', color:'#26241D', border:'none', padding:'10px 18px',
-              borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
+  btnGhostLg: { background:'#fff', color:'#26241D', border:'1px solid #E3DFD5',
+                padding:'10px 16px', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
   btnGhost: { background:'transparent', border:'1px solid #E3DFD5', padding:'5px 10px',
               borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer' },
   overlay: { position:'fixed', inset:0, background:'rgba(30,28,22,0.5)', display:'flex',
@@ -286,4 +412,14 @@ const s = {
   input: { width:'100%', border:'1px solid #E3DFD5', borderRadius:8, padding:'9px 11px',
            fontSize:14, boxSizing:'border-box' },
   row: { display:'flex', gap:12 },
+  avisoError: { marginTop:12, background:'#F7DEDE', color:'#B03A3A', borderRadius:8,
+                padding:'8px 11px', fontSize:12.5 },
+  combo: { position:'absolute', top:'100%', left:0, right:0, zIndex:60, marginTop:4,
+           background:'#fff', border:'1px solid #E3DFD5', borderRadius:8,
+           maxHeight:240, overflowY:'auto', boxShadow:'0 12px 28px rgba(0,0,0,0.14)' },
+  comboItem: { display:'flex', justifyContent:'space-between', alignItems:'center', gap:10,
+               padding:'8px 11px', fontSize:13.5, cursor:'pointer',
+               borderBottom:'1px solid #F2EFE8' },
+  comboRfc: { fontFamily:'monospace', fontSize:11, color:'#A8A395', whiteSpace:'nowrap' },
+  comboMas: { padding:'8px 11px', fontSize:12, color:'#A8A395', background:'#FCFBF8' },
 }

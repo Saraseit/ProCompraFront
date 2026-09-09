@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api'
-
-const money = (n) => (n || 0).toLocaleString("es-MX", { style: "currency", currency: "MXN" })
+import { money, etiquetaMetodo, etiquetaEstado, mensajeError } from '../constants'
 
 export default function Control() {
   const [ordenes, setOrdenes] = useState([])
@@ -25,7 +24,7 @@ export default function Control() {
       ])
       setOrdenes([...pagadas.data, ...recoleccion.data, ...cerradas.data])
     } catch (e) {
-      setError('Error al cargar datos: ' + (e.response?.data?.detail || e.message))
+      setError('Error al cargar datos: ' + mensajeError(e))
     }
     setCargando(false)
   }
@@ -105,8 +104,8 @@ export default function Control() {
               <tr key={o.id}>
                 <td style={{...s.td, fontFamily:'monospace'}}>#{o.folio}</td>
                 <td style={s.td}>{o.proveedor?.nombre || '—'}</td>
-                <td style={s.td}>{o.tipo_pago?.replace(/_/g, ' ') || '—'}</td>
-                <td style={s.td}>{o.estado}</td>
+                <td style={s.td}>{etiquetaMetodo(o.tipo_pago)}</td>
+                <td style={s.td}>{etiquetaEstado(o.estado)}</td>
                 <td style={{...s.td, textAlign:'right', fontWeight:600}}>{money(o.total)}</td>
                 <td style={s.td}>
                   {o.estado === 'cerrada' ? '✓ Recibido' : 'Pendiente'}

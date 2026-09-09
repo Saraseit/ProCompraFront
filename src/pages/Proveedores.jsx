@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api'
+import { mensajeError } from '../constants'
 
 export default function Proveedores({ usuario }) {
   const [proveedores, setProveedores] = useState([])
@@ -23,7 +24,7 @@ export default function Proveedores({ usuario }) {
       const res = await api.get('/proveedores')
       setProveedores(res.data)
     } catch (e) {
-      setError('Error al cargar proveedores: ' + (e.response?.data?.detail || e.message))
+      setError('Error al cargar proveedores: ' + mensajeError(e))
     }
     setCargando(false)
   }
@@ -38,7 +39,7 @@ export default function Proveedores({ usuario }) {
       setForm(null)
       cargarProveedores()
     } catch (e) {
-      alert('Error al guardar: ' + (e.response?.data?.detail || e.message))
+      alert('Error al guardar: ' + mensajeError(e))
     }
   }
 
@@ -48,7 +49,7 @@ export default function Proveedores({ usuario }) {
       await api.delete(`/proveedores/${id}`)
       cargarProveedores()
     } catch (e) {
-      alert('Error: ' + (e.response?.data?.detail || e.message))
+      alert('Error: ' + mensajeError(e))
     }
   }
 
