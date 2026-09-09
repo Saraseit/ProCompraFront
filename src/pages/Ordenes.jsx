@@ -22,11 +22,6 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
   const [busqueda, setBusqueda] = useState('')
   const [ordenAbierta, setOrdenAbierta] = useState(null)
 
-  useEffect(() => {
-    const timer = setTimeout(() => { cargarOrdenes() }, 300)
-    return () => clearTimeout(timer)
-  }, [filtro])
-
   async function cargarOrdenes() {
     setCargando(true)
     setError('')
@@ -39,6 +34,13 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
     }
     setCargando(false)
   }
+
+  // El cambio de filtro se aplica con un respiro para no encadenar peticiones.
+  useEffect(() => {
+    const timer = setTimeout(() => { cargarOrdenes() }, 300)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filtro])
 
   async function abrirOrden(orden) {
     try {

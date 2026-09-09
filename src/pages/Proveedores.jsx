@@ -147,6 +147,7 @@ function ModalProveedor({ data, onClose, onSave }) {
   const [form, setForm] = useState(data)
   const set = (k, v) => setForm({ ...form, [k]: v })
   const esNuevo = !form.id
+  const nombre = (form.nombre || '').trim()
 
   return (
     <div style={s.overlay} onClick={onClose}>
@@ -183,9 +184,11 @@ function ModalProveedor({ data, onClose, onSave }) {
               onChange={(e) => set('cuenta_bancaria', e.target.value)} />
           </Field>
           <button
-            style={{ ...s.btnPrimary, width: '100%', marginTop: 16 }}
-            disabled={!form.nombre}
-            onClick={() => onSave(form)}>
+            style={{ ...s.btnPrimary, width: '100%', marginTop: 16,
+                     opacity: nombre ? 1 : 0.45,
+                     cursor: nombre ? 'pointer' : 'not-allowed' }}
+            disabled={!nombre}
+            onClick={() => onSave({ ...form, nombre })}>
             {esNuevo ? 'Agregar proveedor' : 'Guardar cambios'}
           </button>
         </div>

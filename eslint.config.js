@@ -17,5 +17,10 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // Descartar una propiedad con destructuring es intencional:
+      // const { esNuevo: _, ...datos } = form
+      'no-unused-vars': ['error', { ignoreRestSiblings: true }],
+    },
   },
 ])
