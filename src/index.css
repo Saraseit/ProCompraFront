@@ -1,3 +1,100 @@
+/* ── Tema de ProCompra ─────────────────────────────────────────────
+   Modo claro = paleta original. El modo oscuro se activa con
+   <html data-theme="dark"> (ver ui/BotonTema.jsx). */
+:root {
+  --pc-fondo: #FAF8F3;
+  --pc-superficie: #FFFFFF;
+  --pc-superficie-2: #FCFBF8;
+  --pc-superficie-3: #F4F1EA;
+  --pc-login-fondo: #F4F1EA;
+  --pc-neutro-bg: #EEEBE3;
+  --pc-linea: #EFEBE2;
+  --pc-borde: #E3DFD5;
+  --pc-tinta: #26241D;
+  --pc-gris: #8A8577;
+  --pc-gris-2: #6B6659;
+  --pc-gris-3: #A8A395;
+  --pc-texto-suave: #4A473D;
+  --pc-btn: #26241D;
+  --pc-btn-texto: #FFFFFF;
+  --pc-acento: #C4462B;
+  --pc-acento-bg: #FBF3EF;
+  --pc-acento-borde: #EBD9D1;
+  --pc-rojo: #B03A3A;
+  --pc-rojo-solido: #B03A3A;
+  --pc-rojo-bg: #F7DEDE;
+  --pc-rojo-borde: #E9C9C9;
+  --pc-verde: #2E6B4F;
+  --pc-verde-solido: #2E6B4F;
+  --pc-verde-bg: #DCEEE4;
+  --pc-azul: #1F5AA6;
+  --pc-azul-bg: #DBE7F7;
+  --pc-ambar-bg: #FBF0DA;
+  --pc-ambar-borde: #E8D5A8;
+  --pc-ambar-texto: #7A5B14;
+  --pc-aqua: #1E9E94;
+  --pc-aqua-solido: #1E9E94;
+  --pc-aqua-bg: #DDF3F0;
+
+  --pc-e-borrador: #8A8577;     --pc-e-borrador-bg: #EEEBE3;
+  --pc-e-autorizacion: #B4791F; --pc-e-autorizacion-bg: #FBF0DA;
+  --pc-e-autorizada: #2E6B4F;   --pc-e-autorizada-bg: #DCEEE4;
+  --pc-e-pagada: #1F5AA6;       --pc-e-pagada-bg: #DBE7F7;
+  --pc-e-recoleccion: #8A3FA6;  --pc-e-recoleccion-bg: #EEE1F5;
+  --pc-e-cerrada: #5A5648;      --pc-e-cerrada-bg: #E4E1D8;
+  --pc-e-rechazada: #B03A3A;    --pc-e-rechazada-bg: #F7DEDE;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --text: #B9B4A6;
+  --text-h: #EDEAE0;
+  --bg: #16150F;
+  --border: #3B372D;
+
+  --pc-fondo: #16150F;
+  --pc-superficie: #1F1D17;
+  --pc-superficie-2: #24221B;
+  --pc-superficie-3: #2C2A22;
+  --pc-login-fondo: #16150F;
+  --pc-neutro-bg: #2C2A22;
+  --pc-linea: #2E2B23;
+  --pc-borde: #3B372D;
+  --pc-tinta: #EDEAE0;
+  --pc-gris: #A29D8F;
+  --pc-gris-2: #B8B3A5;
+  --pc-gris-3: #8F8A7C;
+  --pc-texto-suave: #CFCABD;
+  --pc-btn: #EDEAE0;
+  --pc-btn-texto: #1B1912;
+  --pc-acento: #E0684D;
+  --pc-acento-bg: #2E1F1A;
+  --pc-acento-borde: #4A3129;
+  --pc-rojo: #EA8080;
+  --pc-rojo-solido: #B8403F;
+  --pc-rojo-bg: #3A1F1F;
+  --pc-rojo-borde: #5A2E2E;
+  --pc-verde: #7CCBA5;
+  --pc-verde-solido: #2F7A58;
+  --pc-verde-bg: #1B2F26;
+  --pc-azul: #86B2EA;
+  --pc-azul-bg: #1D2A3F;
+  --pc-ambar-bg: #33290F;
+  --pc-ambar-borde: #5A4A22;
+  --pc-ambar-texto: #E3C177;
+  --pc-aqua: #3CC4B8;
+  --pc-aqua-solido: #178077;
+  --pc-aqua-bg: #12302D;
+
+  --pc-e-borrador: #A29D8F;     --pc-e-borrador-bg: #2C2A22;
+  --pc-e-autorizacion: #E0A84A; --pc-e-autorizacion-bg: #33290F;
+  --pc-e-autorizada: #7CCBA5;   --pc-e-autorizada-bg: #1B2F26;
+  --pc-e-pagada: #86B2EA;       --pc-e-pagada-bg: #1D2A3F;
+  --pc-e-recoleccion: #C88AE0;  --pc-e-recoleccion-bg: #2D1E37;
+  --pc-e-cerrada: #B0AB9C;      --pc-e-cerrada-bg: #2C2A22;
+  --pc-e-rechazada: #EA8080;    --pc-e-rechazada-bg: #3A1F1F;
+}
+
 :root {
   --text: #6b6375;
   --text-h: #08060d;
@@ -17,7 +114,7 @@
 
   font: 18px/145% var(--sans);
   letter-spacing: 0.18px;
-  color-scheme: light dark;
+  color-scheme: light;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -30,28 +127,9 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
 body {
   margin: 0;
+  background: var(--pc-fondo);
 }
 
 #root {
@@ -108,4 +186,16 @@ code {
   line-height: 135%;
   padding: 4px 8px;
   background: var(--code-bg);
+}
+
+/* Campos de formulario del modo oscuro (en claro se conserva el estilo del navegador). */
+:root[data-theme='dark'] input,
+:root[data-theme='dark'] select,
+:root[data-theme='dark'] textarea {
+  background: var(--pc-superficie-2);
+  color: var(--pc-tinta);
+}
+:root[data-theme='dark'] input::placeholder,
+:root[data-theme='dark'] textarea::placeholder {
+  color: var(--pc-gris-3);
 }

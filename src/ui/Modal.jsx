@@ -39,12 +39,12 @@ export function Label({ children, requerido, style }) {
 const s = {
   overlay: { position: 'fixed', inset: 0, background: 'rgba(30,28,22,0.5)', display: 'flex',
              justifyContent: 'center', overflowY: 'auto' },
-  modal: { background: '#fff', borderRadius: 16, width: '100%',
+  modal: { background: 'var(--pc-superficie)', borderRadius: 16, width: '100%',
            boxShadow: '0 30px 80px rgba(0,0,0,0.25)' },
   head: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
           padding: '20px 24px', borderBottom: `1px solid ${C.borde}` },
   h3: { fontSize: 18, fontWeight: 600, margin: 0, color: C.tinta },
   label: { display: 'block', fontSize: 12, color: C.gris, marginBottom: 5, fontWeight: 500 },
-  btnX: { border: 'none', background: '#F4F1EA', width: 30, height: 30, borderRadius: 8,
-          cursor: 'pointer', fontSize: 14, color: '#6B6659' },
+  btnX: { border: 'none', background: 'var(--pc-superficie-3)', width: 30, height: 30, borderRadius: 8,
+          cursor: 'pointer', fontSize: 14, color: 'var(--pc-gris-2)' },
 }

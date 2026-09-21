@@ -1,12 +1,15 @@
-// Paleta base del sistema más el acento aguamarina para detalles que deben resaltar.
+// Los colores viven como variables CSS (definidas en index.css) para que el
+// modo claro/oscuro cambie toda la interfaz con un solo atributo en <html>.
+const v = (n) => `var(--pc-${n})`
+
 export const C = {
-  fondo: '#FAF8F3',
-  tinta: '#26241D',
-  acento: '#C4462B',
-  borde: '#E3DFD5',
-  gris: '#8A8577',
-  aqua: '#1E9E94',
-  aquaBg: '#DDF3F0',
-  rojo: '#B03A3A',
-  rojoBg: '#F7DEDE',
+  fondo: v('fondo'),
+  tinta: v('tinta'),
+  acento: v('acento'),
+  borde: v('borde'),
+  gris: v('gris'),
+  aqua: v('aqua'),
+  aquaBg: v('aqua-bg'),
+  rojo: v('rojo'),
+  rojoBg: v('rojo-bg'),
 }

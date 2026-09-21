@@ -77,13 +77,13 @@ export default function Inicio({ usuario, onIr }) {
 }
 
 const s = {
-  h2: { fontSize: 22, fontWeight: 600, margin: 0, color: '#26241D' },
-  help: { fontSize: 13, color: '#8A8577', marginTop: 4 },
-  error: { padding: 20, background: '#F7DEDE', color: '#B03A3A', borderRadius: 8 },
+  h2: { fontSize: 22, fontWeight: 600, margin: 0, color: 'var(--pc-tinta)' },
+  help: { fontSize: 13, color: 'var(--pc-gris)', marginTop: 4 },
+  error: { padding: 20, background: 'var(--pc-rojo-bg)', color: 'var(--pc-rojo)', borderRadius: 8 },
   kpis: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 14 },
-  kpi: { textAlign: 'left', background: '#fff', border: '1px solid #E3DFD5', borderRadius: 12,
+  kpi: { textAlign: 'left', background: 'var(--pc-superficie)', border: '1px solid var(--pc-borde)', borderRadius: 12,
          padding: 20, cursor: 'pointer', font: 'inherit', color: 'inherit' },
-  kpiV: { fontSize: 28, fontWeight: 700, color: '#26241D', lineHeight: 1.1 },
-  kpiT: { fontSize: 13.5, fontWeight: 600, color: '#26241D', marginTop: 8 },
-  kpiL: { fontSize: 12, color: '#8A8577', marginTop: 3 },
+  kpiV: { fontSize: 28, fontWeight: 700, color: 'var(--pc-tinta)', lineHeight: 1.1 },
+  kpiT: { fontSize: 13.5, fontWeight: 600, color: 'var(--pc-tinta)', marginTop: 8 },
+  kpiL: { fontSize: 12, color: 'var(--pc-gris)', marginTop: 3 },
 }

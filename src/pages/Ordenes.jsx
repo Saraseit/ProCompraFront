@@ -303,7 +303,7 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onRechazar, onPa
         <div style={s.modalHeadFila}>
           <div>
             <div style={s.folioBig}>Orden · Folio #{orden.folio}</div>
-            <div style={{ fontSize:13, color:'#8A8577' }}>
+            <div style={{ fontSize:13, color:'var(--pc-gris)' }}>
               {fechaCorta(orden.fecha)} · {orden.creador?.nombre} · {etiquetaMetodo(orden.tipo_pago)}
             </div>
           </div>
@@ -362,8 +362,8 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onRechazar, onPa
               ))}
             </tbody>
             <tfoot>
-              <tr><td colSpan={4} style={{...s.td, textAlign:'right', color:'#8A8577'}}>Subtotal</td><td style={{...s.td, textAlign:'right'}}>{money(orden.subtotal)}</td></tr>
-              <tr><td colSpan={4} style={{...s.td, textAlign:'right', color:'#8A8577'}}>IVA 16%</td><td style={{...s.td, textAlign:'right'}}>{money(orden.iva)}</td></tr>
+              <tr><td colSpan={4} style={{...s.td, textAlign:'right', color:'var(--pc-gris)'}}>Subtotal</td><td style={{...s.td, textAlign:'right'}}>{money(orden.subtotal)}</td></tr>
+              <tr><td colSpan={4} style={{...s.td, textAlign:'right', color:'var(--pc-gris)'}}>IVA 16%</td><td style={{...s.td, textAlign:'right'}}>{money(orden.iva)}</td></tr>
               <tr><td colSpan={4} style={{...s.td, textAlign:'right', fontWeight:700}}>Total</td><td style={{...s.td, textAlign:'right', fontWeight:700}}>{money(orden.total)}</td></tr>
             </tfoot>
           </table>
@@ -499,14 +499,14 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onRechazar, onPa
               </div>
             )}
             {e === 'cerrada' && <div style={s.pagoInfo}>✓ Orden cerrada.</div>}
-            {e === 'rechazada' && <div style={{...s.pagoInfo, background:'#F7DEDE', color:'#B03A3A'}}>✕ Rechazada.</div>}
+            {e === 'rechazada' && <div style={{...s.pagoInfo, background:'var(--pc-rojo-bg)', color:'var(--pc-rojo)'}}>✕ Rechazada.</div>}
           </div>
         </>)}
 
         {pestana === 'historial' && (
           <div style={s.box}>
             {nHistorial === 0 && (
-              <div style={{ fontSize:12.5, color:'#A8A395' }}>Sin eventos registrados.</div>
+              <div style={{ fontSize:12.5, color:'var(--pc-gris-3)' }}>Sin eventos registrados.</div>
             )}
             {orden.historial?.map((h) => (
               <div key={h.id} style={s.histLine}>
@@ -529,71 +529,71 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onRechazar, onPa
 const s = {
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
             marginBottom:14, gap:16, flexWrap:'wrap' },
-  h2: { fontSize:22, fontWeight:600, margin:0, color:'#26241D' },
-  help: { fontSize:13, color:'#8A8577', marginTop:4, maxWidth:420 },
-  msg: { padding:'0 0 12px', color:'#8A8577', fontSize:13 },
-  error: { padding:20, background:'#F7DEDE', color:'#B03A3A', borderRadius:8 },
-  empty: { gridColumn:'1 / -1', padding:'40px 20px', textAlign:'center', color:'#8A8577', fontSize:14,
-           background:'#fff', border:'1px dashed #E3DFD5', borderRadius:12 },
-  emptyTitulo: { fontSize:16, fontWeight:600, color:'#26241D', marginBottom:10 },
-  select: { border:'1px solid #E3DFD5', borderRadius:8, padding:'9px 11px', fontSize:14, background:'#fff' },
-  buscador: { display:'flex', alignItems:'center', gap:10, background:'#fff',
-              borderWidth:1, borderStyle:'solid', borderColor:'#E3DFD5',
+  h2: { fontSize:22, fontWeight:600, margin:0, color:'var(--pc-tinta)' },
+  help: { fontSize:13, color:'var(--pc-gris)', marginTop:4, maxWidth:420 },
+  msg: { padding:'0 0 12px', color:'var(--pc-gris)', fontSize:13 },
+  error: { padding:20, background:'var(--pc-rojo-bg)', color:'var(--pc-rojo)', borderRadius:8 },
+  empty: { gridColumn:'1 / -1', padding:'40px 20px', textAlign:'center', color:'var(--pc-gris)', fontSize:14,
+           background:'var(--pc-superficie)', border:'1px dashed var(--pc-borde)', borderRadius:12 },
+  emptyTitulo: { fontSize:16, fontWeight:600, color:'var(--pc-tinta)', marginBottom:10 },
+  select: { border:'1px solid var(--pc-borde)', borderRadius:8, padding:'9px 11px', fontSize:14, background:'var(--pc-superficie)' },
+  buscador: { display:'flex', alignItems:'center', gap:10, background:'var(--pc-superficie)',
+              borderWidth:1, borderStyle:'solid', borderColor:'var(--pc-borde)',
               borderRadius:10, padding:'0 12px', marginBottom:16, transition:'border-color 0.15s, box-shadow 0.15s' },
   buscadorActivo: { borderColor:C.aqua, boxShadow:`0 0 0 3px ${C.aquaBg}` },
-  lupa: { fontSize:18, color:'#A8A395', lineHeight:1 },
+  lupa: { fontSize:18, color:'var(--pc-gris-3)', lineHeight:1 },
   buscadorInput: { flex:1, border:'none', outline:'none', padding:'11px 0', fontSize:14,
-                   background:'transparent', font:'inherit', color:'#26241D' },
+                   background:'transparent', font:'inherit', color:'var(--pc-tinta)' },
   conteo: { fontSize:12, fontWeight:600, color:C.aqua, background:C.aquaBg, padding:'3px 9px',
             borderRadius:20, whiteSpace:'nowrap' },
-  btnLimpiar: { border:'none', background:'#F4F1EA', width:26, height:26, borderRadius:7,
-                cursor:'pointer', fontSize:12, color:'#6B6659' },
+  btnLimpiar: { border:'none', background:'var(--pc-superficie-3)', width:26, height:26, borderRadius:7,
+                cursor:'pointer', fontSize:12, color:'var(--pc-gris-2)' },
   grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px,1fr))', gap:14 },
-  card: { textAlign:'left', background:'#fff', borderRadius:12,
-          borderTop:'1px solid #E3DFD5', borderRight:'1px solid #E3DFD5', borderBottom:'1px solid #E3DFD5',
+  card: { textAlign:'left', background:'var(--pc-superficie)', borderRadius:12,
+          borderTop:'1px solid var(--pc-borde)', borderRight:'1px solid var(--pc-borde)', borderBottom:'1px solid var(--pc-borde)',
           padding:16, cursor:'pointer', font:'inherit', color:'inherit',
           display:'flex', flexDirection:'column', gap:6 },
   cardTop: { display:'flex', justifyContent:'space-between', alignItems:'center' },
-  folioTag: { fontSize:12, fontWeight:600, color:'#6B6659', letterSpacing:'0.02em' },
-  folioBig: { fontSize:20, fontWeight:700, color:'#26241D' },
+  folioTag: { fontSize:12, fontWeight:600, color:'var(--pc-gris-2)', letterSpacing:'0.02em' },
+  folioBig: { fontSize:20, fontWeight:700, color:'var(--pc-tinta)' },
   prov: { fontWeight:600, fontSize:15, lineHeight:1.3 },
-  meta: { fontSize:12, color:'#8A8577' },
+  meta: { fontSize:12, color:'var(--pc-gris)' },
   total: { fontSize:18, fontWeight:700, marginTop:4 },
-  modalHead: { padding:'20px 24px 0', borderBottom:'1px solid #E3DFD5',
-               position:'sticky', top:0, background:'#fff', borderRadius:'16px 16px 0 0', zIndex:2 },
+  modalHead: { padding:'20px 24px 0', borderBottom:'1px solid var(--pc-borde)',
+               position:'sticky', top:0, background:'var(--pc-superficie)', borderRadius:'16px 16px 0 0', zIndex:2 },
   modalHeadFila: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 },
   pestanas: { display:'flex', gap:4, marginTop:14 },
   pestana: { border:'none', background:'none', padding:'10px 14px', fontSize:13.5, fontWeight:500,
-             cursor:'pointer', color:'#8A8577', borderBottom:'2px solid transparent', marginBottom:-1,
+             cursor:'pointer', color:'var(--pc-gris)', borderBottom:'2px solid transparent', marginBottom:-1,
              display:'flex', alignItems:'center', gap:6, font:'inherit' },
-  pestanaActiva: { color:'#26241D', fontWeight:600, borderBottom:`2px solid ${C.aqua}` },
-  pestanaCuenta: { fontSize:11, fontWeight:600, background:'#F4F1EA', color:'#6B6659',
+  pestanaActiva: { color:'var(--pc-tinta)', fontWeight:600, borderBottom:`2px solid ${C.aqua}` },
+  pestanaCuenta: { fontSize:11, fontWeight:600, background:'var(--pc-superficie-3)', color:'var(--pc-gris-2)',
                    padding:'1px 7px', borderRadius:10 },
   pestanaCuentaActiva: { fontSize:11, fontWeight:600, background:C.aquaBg, color:C.aqua,
                          padding:'1px 7px', borderRadius:10 },
   modalBody: { padding:24 },
-  box: { border:'1px solid #E3DFD5', borderRadius:10, padding:14, background:'#FCFBF8' },
-  boxTitle: { fontSize:11, textTransform:'uppercase', letterSpacing:'0.06em', color:'#8A8577', fontWeight:600, marginBottom:10 },
+  box: { border:'1px solid var(--pc-borde)', borderRadius:10, padding:14, background:'var(--pc-superficie-2)' },
+  boxTitle: { fontSize:11, textTransform:'uppercase', letterSpacing:'0.06em', color:'var(--pc-gris)', fontWeight:600, marginBottom:10 },
   lineItem: { display:'flex', justifyContent:'space-between', fontSize:13, padding:'2px 0' },
-  lineL: { color:'#8A8577' },
+  lineL: { color:'var(--pc-gris)' },
   table: { width:'100%', borderCollapse:'collapse', fontSize:13 },
-  th: { textAlign:'left', padding:'10px 8px', background:'#F4F1EA', color:'#6B6659',
+  th: { textAlign:'left', padding:'10px 8px', background:'var(--pc-superficie-3)', color:'var(--pc-gris-2)',
         fontWeight:600, fontSize:11, textTransform:'uppercase' },
-  td: { padding:'10px 8px', borderBottom:'1px solid #EFEBE2' },
+  td: { padding:'10px 8px', borderBottom:'1px solid var(--pc-linea)' },
   acciones: { display:'flex', gap:10, justifyContent:'flex-end', marginTop:18, flexWrap:'wrap', alignItems:'center' },
-  pagoBox: { width:'100%', background:'#FCFBF8', border:'1px solid #E3DFD5', borderRadius:10, padding:16 },
+  pagoBox: { width:'100%', background:'var(--pc-superficie-2)', border:'1px solid var(--pc-borde)', borderRadius:10, padding:16 },
   pagoGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:10 },
-  pagoInfo: { background:'#DBE7F7', color:'#1F5AA6', padding:'10px 14px', borderRadius:8, fontSize:13, fontWeight:500 },
-  histLine: { display:'flex', gap:12, fontSize:12.5, padding:'7px 0', borderBottom:'1px dashed #E3DFD5' },
-  histTime: { color:'#A8A395', minWidth:110 },
-  histUser: { color:'#A8A395' },
-  label: { display:'block', fontSize:12, color:'#8A8577', marginBottom:5, fontWeight:500 },
-  input: { width:'100%', border:'1px solid #E3DFD5', borderRadius:8, padding:'9px 11px', fontSize:13, boxSizing:'border-box' },
-  btnPrimary: { background:'#26241D', color:'#fff', border:'none', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
-  btnOk: { background:'#2E6B4F', color:'#fff', border:'none', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
-  btnDanger: { background:'#fff', color:'#B03A3A', border:'1px solid #E9C9C9', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
-  btnGhost: { background:'#fff', border:'1px solid #E3DFD5', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', color:'#26241D' },
-  btnX: { border:'none', background:'#F4F1EA', width:30, height:30, borderRadius:8, cursor:'pointer', fontSize:14, color:'#6B6659' },
-  btnPdf: { background:'#fff', color:'#26241D', border:'1px solid #E3DFD5', padding:'7px 13px',
+  pagoInfo: { background:'var(--pc-azul-bg)', color:'var(--pc-azul)', padding:'10px 14px', borderRadius:8, fontSize:13, fontWeight:500 },
+  histLine: { display:'flex', gap:12, fontSize:12.5, padding:'7px 0', borderBottom:'1px dashed var(--pc-borde)' },
+  histTime: { color:'var(--pc-gris-3)', minWidth:110 },
+  histUser: { color:'var(--pc-gris-3)' },
+  label: { display:'block', fontSize:12, color:'var(--pc-gris)', marginBottom:5, fontWeight:500 },
+  input: { width:'100%', border:'1px solid var(--pc-borde)', borderRadius:8, padding:'9px 11px', fontSize:13, boxSizing:'border-box' },
+  btnPrimary: { background:'var(--pc-btn)', color:'var(--pc-btn-texto)', border:'none', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
+  btnOk: { background:'var(--pc-verde-solido)', color:'#fff', border:'none', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
+  btnDanger: { background:'var(--pc-superficie)', color:'var(--pc-rojo)', border:'1px solid var(--pc-rojo-borde)', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
+  btnGhost: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', color:'var(--pc-tinta)' },
+  btnX: { border:'none', background:'var(--pc-superficie-3)', width:30, height:30, borderRadius:8, cursor:'pointer', fontSize:14, color:'var(--pc-gris-2)' },
+  btnPdf: { background:'var(--pc-superficie)', color:'var(--pc-tinta)', border:'1px solid var(--pc-borde)', padding:'7px 13px',
             borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' },
 }

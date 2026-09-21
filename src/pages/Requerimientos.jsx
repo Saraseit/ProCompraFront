@@ -226,7 +226,7 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
               </td></tr>
             )}
             {requerimientos.map((r) => (
-              <tr key={r.id} style={sel[r.id] ? { background:'#FBF3EF' } : {}}>
+              <tr key={r.id} style={sel[r.id] ? { background:'var(--pc-acento-bg)' } : {}}>
                 <td style={s.td}>
                   <input type="checkbox" checked={!!sel[r.id]} onChange={() => toggle(r.id)} />
                 </td>
@@ -410,7 +410,7 @@ function ComboProveedor({ proveedores, valor, onChange, onAgregar }) {
       />
       {abierto && (
         <div style={s.combo}>
-          <div style={{ ...s.comboItem, color:'#8A8577' }}
+          <div style={{ ...s.comboItem, color:'var(--pc-gris)' }}
             onMouseDown={() => elegir(null)}>
             — Ninguno —
           </div>
@@ -421,7 +421,7 @@ function ComboProveedor({ proveedores, valor, onChange, onAgregar }) {
             </div>
           ))}
           {coincidencias.length === 0 && (
-            <div style={{ ...s.comboItem, color:'#A8A395' }}>Sin coincidencias.</div>
+            <div style={{ ...s.comboItem, color:'var(--pc-gris-3)' }}>Sin coincidencias.</div>
           )}
           {coincidencias.length > opciones.length && (
             <div style={s.comboMas}>
@@ -447,43 +447,43 @@ function ComboProveedor({ proveedores, valor, onChange, onAgregar }) {
 const s = {
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
             marginBottom:16, gap:16, flexWrap:'wrap' },
-  h2: { fontSize:22, fontWeight:600, margin:0, color:'#26241D' },
-  help: { fontSize:13, color:'#8A8577', marginTop:4 },
-  card: { background:'#fff', border:'1px solid #E3DFD5', borderRadius:12, overflow:'hidden' },
+  h2: { fontSize:22, fontWeight:600, margin:0, color:'var(--pc-tinta)' },
+  help: { fontSize:13, color:'var(--pc-gris)', marginTop:4 },
+  card: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:12, overflow:'hidden' },
   table: { width:'100%', borderCollapse:'collapse', fontSize:14 },
-  th: { textAlign:'left', padding:'11px 14px', background:'#F4F1EA', color:'#6B6659',
-        fontWeight:600, fontSize:11, textTransform:'uppercase', borderBottom:'1px solid #E3DFD5' },
-  td: { padding:'11px 14px', borderBottom:'1px solid #EFEBE2' },
-  empty: { textAlign:'center', color:'#8A8577', padding:'34px 26px', fontSize:14 },
-  emptyTitulo: { fontSize:16, fontWeight:600, color:'#26241D', marginBottom:4 },
-  msg: { padding:40, color:'#8A8577' },
-  error: { padding:20, background:'#F7DEDE', color:'#B03A3A', borderRadius:8 },
-  resumen: { marginBottom:12, background:'#FBF3EF', border:'1px solid #EBD9D1',
-             borderRadius:10, padding:'11px 14px', fontSize:13, color:'#6B6659' },
-  resumenAviso: { marginBottom:12, background:'#FBF0DA', border:'1px solid #E8D5A8',
-                  borderRadius:10, padding:'11px 14px', fontSize:13, color:'#7A5B14' },
+  th: { textAlign:'left', padding:'11px 14px', background:'var(--pc-superficie-3)', color:'var(--pc-gris-2)',
+        fontWeight:600, fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--pc-borde)' },
+  td: { padding:'11px 14px', borderBottom:'1px solid var(--pc-linea)' },
+  empty: { textAlign:'center', color:'var(--pc-gris)', padding:'34px 26px', fontSize:14 },
+  emptyTitulo: { fontSize:16, fontWeight:600, color:'var(--pc-tinta)', marginBottom:4 },
+  msg: { padding:40, color:'var(--pc-gris)' },
+  error: { padding:20, background:'var(--pc-rojo-bg)', color:'var(--pc-rojo)', borderRadius:8 },
+  resumen: { marginBottom:12, background:'var(--pc-acento-bg)', border:'1px solid var(--pc-acento-borde)',
+             borderRadius:10, padding:'11px 14px', fontSize:13, color:'var(--pc-gris-2)' },
+  resumenAviso: { marginBottom:12, background:'var(--pc-ambar-bg)', border:'1px solid var(--pc-ambar-borde)',
+                  borderRadius:10, padding:'11px 14px', fontSize:13, color:'var(--pc-ambar-texto)' },
   thCheck: { display:'flex', alignItems:'center', gap:6, cursor:'pointer',
-             fontSize:11, textTransform:'uppercase', fontWeight:600, color:'#6B6659' },
-  btnPrimary: { background:'#26241D', color:'#fff', border:'none', padding:'10px 16px',
+             fontSize:11, textTransform:'uppercase', fontWeight:600, color:'var(--pc-gris-2)' },
+  btnPrimary: { background:'var(--pc-btn)', color:'var(--pc-btn-texto)', border:'none', padding:'10px 16px',
                 borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
-  btnGhostLg: { background:'#fff', color:'#26241D', border:'1px solid #E3DFD5',
+  btnGhostLg: { background:'var(--pc-superficie)', color:'var(--pc-tinta)', border:'1px solid var(--pc-borde)',
                 padding:'10px 16px', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
-  btnGhost: { background:'transparent', border:'1px solid #E3DFD5', padding:'5px 10px',
+  btnGhost: { background:'transparent', border:'1px solid var(--pc-borde)', padding:'5px 10px',
               borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer' },
   labelGap: { marginTop:12 },
-  input: { width:'100%', border:'1px solid #E3DFD5', borderRadius:8, padding:'9px 11px',
+  input: { width:'100%', border:'1px solid var(--pc-borde)', borderRadius:8, padding:'9px 11px',
            fontSize:14, boxSizing:'border-box' },
   row: { display:'flex', gap:12 },
-  avisoError: { marginTop:12, background:'#F7DEDE', color:'#B03A3A', borderRadius:8,
+  avisoError: { marginTop:12, background:'var(--pc-rojo-bg)', color:'var(--pc-rojo)', borderRadius:8,
                 padding:'8px 11px', fontSize:12.5 },
   combo: { position:'absolute', top:'100%', left:0, right:0, zIndex:60, marginTop:4,
-           background:'#fff', border:'1px solid #E3DFD5', borderRadius:8,
+           background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:8,
            maxHeight:240, overflowY:'auto', boxShadow:'0 12px 28px rgba(0,0,0,0.14)' },
   comboItem: { display:'flex', justifyContent:'space-between', alignItems:'center', gap:10,
                padding:'8px 11px', fontSize:13.5, cursor:'pointer',
-               borderBottom:'1px solid #F2EFE8' },
-  comboRfc: { fontFamily:'monospace', fontSize:11, color:'#A8A395', whiteSpace:'nowrap' },
-  comboMas: { padding:'8px 11px', fontSize:12, color:'#A8A395', background:'#FCFBF8' },
+               borderBottom:'1px solid var(--pc-linea)' },
+  comboRfc: { fontFamily:'monospace', fontSize:11, color:'var(--pc-gris-3)', whiteSpace:'nowrap' },
+  comboMas: { padding:'8px 11px', fontSize:12, color:'var(--pc-gris-3)', background:'var(--pc-superficie-2)' },
   comboNuevo: { position:'sticky', bottom:0, padding:'9px 11px', fontSize:13.5, fontWeight:600,
                 cursor:'pointer', color:C.aqua, background:C.aquaBg,
                 borderTop:`1px solid ${C.aqua}` },

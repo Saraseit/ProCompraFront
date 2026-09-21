@@ -9,14 +9,20 @@ export const METODOS_PAGO = [
 export const etiquetaMetodo = (valor) =>
   METODOS_PAGO.find(([k]) => k === valor)?.[1] || '—'
 
+// Los colores de estado son variables CSS: en modo claro valen los tonos de marca
+// (borrador #8A8577, autorización #B4791F, ...) y en oscuro sus variantes aclaradas.
+const estado = (label, clave) => ({
+  label, color: `var(--pc-e-${clave})`, bg: `var(--pc-e-${clave}-bg)`,
+})
+
 export const ESTADOS = {
-  borrador:     { label: 'Borrador',        color: '#8A8577', bg: '#EEEBE3' },
-  autorizacion: { label: 'En autorización', color: '#B4791F', bg: '#FBF0DA' },
-  autorizada:   { label: 'Autorizada',      color: '#2E6B4F', bg: '#DCEEE4' },
-  pagada:       { label: 'Pagada',          color: '#1F5AA6', bg: '#DBE7F7' },
-  recoleccion:  { label: 'Por recolectar',  color: '#8A3FA6', bg: '#EEE1F5' },
-  cerrada:      { label: 'Cerrada',         color: '#5A5648', bg: '#E4E1D8' },
-  rechazada:    { label: 'Rechazada',       color: '#B03A3A', bg: '#F7DEDE' },
+  borrador:     estado('Borrador',        'borrador'),
+  autorizacion: estado('En autorización', 'autorizacion'),
+  autorizada:   estado('Autorizada',      'autorizada'),
+  pagada:       estado('Pagada',          'pagada'),
+  recoleccion:  estado('Por recolectar',  'recoleccion'),
+  cerrada:      estado('Cerrada',         'cerrada'),
+  rechazada:    estado('Rechazada',       'rechazada'),
 }
 
 export const etiquetaEstado = (valor) => ESTADOS[valor]?.label || valor || '—'

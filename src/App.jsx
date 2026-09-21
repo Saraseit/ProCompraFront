@@ -9,6 +9,7 @@ import Control from './pages/Control'
 import Proveedores from './pages/Proveedores'
 import Usuarios from './pages/Usuarios'
 import { C } from './ui/tema'
+import BotonTema from './ui/BotonTema'
 
 function App() {
   const [session, setSession] = useState(null)
@@ -82,13 +83,14 @@ function App() {
     <div style={{ minHeight:'100vh', background:C.fondo, fontFamily:"'Inter', system-ui, sans-serif" }}>
 
       <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-                       padding:'18px 32px', background:'#fff', borderBottom:`1px solid ${C.borde}` }}>
+                       padding:'18px 32px', background:'var(--pc-superficie)', borderBottom:`1px solid ${C.borde}` }}>
         <div>
           <span style={{ fontSize:22, fontWeight:700, color:C.tinta }}>MINIMAL 4.0</span>
           <span style={{ fontSize:13, color:C.gris, marginLeft:10 }}>ProCompra</span>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:14 }}>
           <span style={{ fontSize:13, color:C.gris }}>{usuario.nombre} · {usuario.rol}</span>
+          <BotonTema />
           <button onClick={() => supabase.auth.signOut()}
             style={{ background:'none', border:`1px solid ${C.borde}`, padding:'7px 14px',
                      borderRadius:8, fontSize:13, cursor:'pointer' }}>
@@ -97,7 +99,7 @@ function App() {
         </div>
       </header>
 
-      <nav style={{ display:'flex', gap:4, padding:'0 32px', background:'#fff',
+      <nav style={{ display:'flex', gap:4, padding:'0 32px', background:'var(--pc-superficie)',
                     borderBottom:`1px solid ${C.borde}`, overflowX:'auto' }}>
         {pestanas.map(([k, label, cuenta, descripcion]) => (
           <button key={k} onClick={() => irA(k)}
@@ -138,7 +140,7 @@ function App() {
 
 const s = {
   badge: { minWidth:20, height:20, padding:'0 6px', borderRadius:10, boxSizing:'border-box',
-           background:C.aqua, color:'#fff', fontSize:11, fontWeight:700,
+           background:'var(--pc-aqua-solido)', color:'#fff', fontSize:11, fontWeight:700,
            display:'inline-flex', alignItems:'center', justifyContent:'center' },
 }
 

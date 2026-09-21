@@ -4,7 +4,16 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>frontend</title>
+    <title>ProCompra</title>
+    <script>
+      // Aplica el tema antes de pintar para evitar el parpadeo claro -> oscuro.
+      (function () {
+        var tema = null
+        try { tema = localStorage.getItem('procompra-tema') } catch (e) {}
+        if (tema !== 'dark') tema = 'light'
+        document.documentElement.setAttribute('data-theme', tema)
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
