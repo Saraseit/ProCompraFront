@@ -47,3 +47,7 @@ export const fechaCorta = (valor) =>
         day: '2-digit', month: 'short', year: 'numeric',
       })
     : '—'
+
+export const PROVEEDOR_VACIO = {
+  nombre: '', rfc: '', correo: '', telefono: '', direccion: '', cuenta_bancaria: '',
+}
