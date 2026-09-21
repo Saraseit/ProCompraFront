@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import api from '../api'
 import { money, METODOS_PAGO, etiquetaMetodo, etiquetaEstado, mensajeError } from '../constants'
+import { useToast } from '../ui/feedback-context'
 
 const FILTROS_VACIOS = { desde: '', hasta: '', proveedor_id: '', tipo_pago: '' }
 
@@ -11,6 +12,7 @@ export default function Control() {
   const [cargando, setCargando] = useState(true)
   const [exportando, setExportando] = useState(false)
   const [error, setError] = useState('')
+  const toast = useToast()
 
   const hayFiltros = Object.values(filtros).some(Boolean)
 
@@ -66,7 +68,7 @@ export default function Control() {
       if (e.response?.data instanceof Blob) {
         try { detalle = JSON.parse(await e.response.data.text()).detail } catch { detalle = '' }
       }
-      alert('No se pudo exportar: ' + (detalle || mensajeError(e)))
+      toast('No se pudo exportar: ' + (detalle || mensajeError(e)), 'error')
     }
     setExportando(false)
   }

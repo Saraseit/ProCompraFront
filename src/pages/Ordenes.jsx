@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react'
 import api from '../api'
 import { ESTADOS, METODOS_PAGO, etiquetaMetodo, money, fechaCorta, mensajeError } from '../constants'
+import Modal from '../ui/Modal'
+import { useToast, useConfirm } from '../ui/feedback-context'
+import { C } from '../ui/tema'
 
 const hoy = () => new Date().toISOString().slice(0, 10)
+
+const MENSAJE_ESTADO = {
+  autorizacion: (folio) => `Orden #${folio} enviada a autorización`,
+  autorizada:   (folio) => `Orden #${folio} autorizada`,
+  rechazada:    (folio) => `Orden #${folio} rechazada`,
+}
 
 function Badge({ estado }) {
   const e = ESTADOS[estado] || ESTADOS.borrador
@@ -14,13 +23,16 @@ function Badge({ estado }) {
   )
 }
 
-export default function Ordenes({ usuario, filtroInicial = '' }) {
+export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
   const [ordenes, setOrdenes] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [filtro, setFiltro] = useState(filtroInicial)
   const [busqueda, setBusqueda] = useState('')
+  const [buscadorActivo, setBuscadorActivo] = useState(false)
   const [ordenAbierta, setOrdenAbierta] = useState(null)
+  const toast = useToast()
+  const confirmar = useConfirm()
 
   async function cargarOrdenes() {
     setCargando(true)
@@ -47,7 +59,7 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
       const res = await api.get(`/ordenes/${orden.id}`)
       setOrdenAbierta(res.data)
     } catch (e) {
-      alert('Error al abrir orden: ' + mensajeError(e))
+      toast('Error al abrir orden: ' + mensajeError(e), 'error')
     }
   }
 
@@ -55,43 +67,69 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
     const res = await api.get(`/ordenes/${ordenId}`)
     setOrdenAbierta(res.data)
     cargarOrdenes()
+    if (onCambio) onCambio()
   }
 
-  async function cambiarEstado(ordenId, estado, detalle = '') {
+  async function cambiarEstado(orden, estado, detalle = '') {
     try {
-      await api.patch(`/ordenes/${ordenId}/estado`, { estado, detalle })
-      await refrescarOrden(ordenId)
+      await api.patch(`/ordenes/${orden.id}/estado`, { estado, detalle })
+      toast(MENSAJE_ESTADO[estado]?.(orden.folio) || 'Estado actualizado')
+      await refrescarOrden(orden.id)
     } catch (e) {
-      alert('Error: ' + mensajeError(e))
+      toast('Error: ' + mensajeError(e), 'error')
     }
   }
 
-  async function registrarPago(ordenId, pago) {
+  async function rechazarOrden(orden) {
+    const motivo = await confirmar({
+      titulo: `Rechazar orden #${orden.folio}`,
+      mensaje: 'El motivo queda en el historial de la orden.',
+      pedirTexto: 'Motivo del rechazo',
+      placeholder: 'Ej. precio fuera de presupuesto',
+      textoBoton: 'Rechazar orden',
+      peligro: true,
+    })
+    if (motivo) await cambiarEstado(orden, 'rechazada', motivo)
+  }
+
+  async function registrarPago(orden, pago) {
     try {
-      await api.post(`/ordenes/${ordenId}/pago`, { ...pago, registrado_por: usuario.id })
-      await refrescarOrden(ordenId)
+      await api.post(`/ordenes/${orden.id}/pago`, { ...pago, registrado_por: usuario.id })
+      toast(`Pago registrado para la orden #${orden.folio}`)
+      await refrescarOrden(orden.id)
     } catch (e) {
-      alert('Error: ' + mensajeError(e))
+      toast('Error: ' + mensajeError(e), 'error')
     }
   }
 
-  async function registrarRecoleccion(ordenId, rec) {
+  async function registrarRecoleccion(orden, rec) {
     try {
-      await api.post(`/ordenes/${ordenId}/recoleccion`, rec)
-      await refrescarOrden(ordenId)
+      await api.post(`/ordenes/${orden.id}/recoleccion`, rec)
+      toast(rec.completado
+        ? `Orden #${orden.folio} marcada como recolectada`
+        : 'Recolección programada')
+      await refrescarOrden(orden.id)
     } catch (e) {
-      alert('Error: ' + mensajeError(e))
+      toast('Error: ' + mensajeError(e), 'error')
     }
   }
 
-  async function eliminarOrden(ordenId, folio) {
-    if (!confirm(`¿Eliminar la orden #${folio}? Esta acción no se puede deshacer.`)) return
+  async function eliminarOrden(orden) {
+    const ok = await confirmar({
+      titulo: `Eliminar orden #${orden.folio}`,
+      mensaje: 'Esta acción no se puede deshacer.',
+      textoBoton: 'Eliminar',
+      peligro: true,
+    })
+    if (!ok) return
     try {
-      await api.delete(`/ordenes/${ordenId}`)
+      await api.delete(`/ordenes/${orden.id}`)
+      toast(`Orden #${orden.folio} eliminada`)
       setOrdenAbierta(null)
       cargarOrdenes()
+      if (onCambio) onCambio()
     } catch (e) {
-      alert('Error: ' + mensajeError(e))
+      toast('Error: ' + mensajeError(e), 'error')
     }
   }
 
@@ -112,7 +150,7 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
       if (e.response?.data instanceof Blob) {
         try { detalle = JSON.parse(await e.response.data.text()).detail } catch { detalle = '' }
       }
-      alert('No se pudo generar el PDF: ' + (detalle || mensajeError(e)))
+      toast('No se pudo generar el PDF: ' + (detalle || mensajeError(e)), 'error')
     }
   }
 
@@ -121,7 +159,7 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
       await api.put(`/ordenes/${ordenId}`, patch)
       await refrescarOrden(ordenId)
     } catch (e) {
-      alert('Error: ' + mensajeError(e))
+      toast('Error: ' + mensajeError(e), 'error')
     }
   }
 
@@ -145,29 +183,45 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
             El folio es el número consecutivo que identifica cada orden ante el proveedor.
           </p>
         </div>
-        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-          <input
-            style={{ ...s.select, width:250 }}
-            placeholder="Buscar por folio, proveedor o concepto..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-          <select style={s.select} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="">Todas las activas</option>
-            {Object.entries(ESTADOS).map(([k, v]) => (
-              <option key={k} value={k}>
-                {k === 'rechazada' ? 'Rechazadas y eliminadas' : v.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select style={s.select} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+          <option value="">Todas las activas</option>
+          {Object.entries(ESTADOS).map(([k, v]) => (
+            <option key={k} value={k}>
+              {k === 'rechazada' ? 'Rechazadas y eliminadas' : v.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ ...s.buscador, ...(buscadorActivo ? s.buscadorActivo : {}) }}>
+        <span style={s.lupa} aria-hidden>⌕</span>
+        <input
+          style={s.buscadorInput}
+          placeholder="Buscar por folio, proveedor o concepto..."
+          value={busqueda}
+          onFocus={() => setBuscadorActivo(true)}
+          onBlur={() => setBuscadorActivo(false)}
+          onChange={(e) => setBusqueda(e.target.value)}
+        />
+        {termino && (
+          <>
+            <span style={s.conteo}>
+              {visibles.length} de {ordenes.length}
+            </span>
+            <button style={s.btnLimpiar} onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda">
+              ✕
+            </button>
+          </>
+        )}
       </div>
 
       {cargando && <div style={s.msg}>Cargando órdenes...</div>}
 
       <div style={s.grid}>
         {visibles.map((o) => (
-          <button key={o.id} style={s.card} onClick={() => abrirOrden(o)}>
+          <button key={o.id}
+            style={{ ...s.card, borderLeft: `4px solid ${(ESTADOS[o.estado] || ESTADOS.borrador).color}` }}
+            onClick={() => abrirOrden(o)}>
             <div style={s.cardTop}>
               <span style={s.folioTag}>Folio #{o.folio}</span>
               <Badge estado={o.estado} />
@@ -180,19 +234,34 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
         ))}
         {!cargando && visibles.length === 0 && (
           <div style={s.empty}>
-            {termino
-              ? `Ninguna orden coincide con "${busqueda.trim()}".`
-              : 'No hay órdenes en este estado.'}
+            {termino ? (
+              <>
+                <div style={s.emptyTitulo}>Ninguna orden coincide con “{busqueda.trim()}”.</div>
+                <button style={s.btnGhost} onClick={() => setBusqueda('')}>Limpiar búsqueda</button>
+              </>
+            ) : filtro ? (
+              <>
+                <div style={s.emptyTitulo}>No hay órdenes en este estado.</div>
+                <button style={s.btnGhost} onClick={() => setFiltro('')}>Ver todas las activas</button>
+              </>
+            ) : (
+              <>
+                <div style={s.emptyTitulo}>No hay órdenes activas.</div>
+                <div>Genera una desde Requerimientos seleccionando los artículos a comprar.</div>
+              </>
+            )}
           </div>
         )}
       </div>
 
       {ordenAbierta && (
         <ModalOrden
+          key={ordenAbierta.id}
           orden={ordenAbierta}
           usuario={usuario}
           onClose={() => setOrdenAbierta(null)}
           onCambiarEstado={cambiarEstado}
+          onRechazar={rechazarOrden}
           onPago={registrarPago}
           onRecoleccion={registrarRecoleccion}
           onEliminar={eliminarOrden}
@@ -204,18 +273,34 @@ export default function Ordenes({ usuario, filtroInicial = '' }) {
   )
 }
 
-function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecoleccion, onEliminar, onActualizar, onDescargarPdf }) {
+function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onRechazar, onPago, onRecoleccion, onEliminar, onActualizar, onDescargarPdf }) {
+  const [pestana, setPestana] = useState('detalle')
+  const [procesando, setProcesando] = useState(null)
   const [pago, setPago] = useState({ fecha_pago: hoy(), referencia: '', metodo: 'transferencia', monto: orden.total })
   const [rec, setRec] = useState({ tipo: 'recoleccion', fecha_programada: hoy(), responsable: '', notas: '', completado: false })
   const [obs, setObs] = useState(orden.observaciones || '')
   const [tipoPago, setTipoPago] = useState(orden.tipo_pago || 'transferencia')
   const e = orden.estado
+  const nHistorial = orden.historial?.length || 0
+
+  // Solo una acción a la vez: mientras hay una petición en curso todos los botones quedan bloqueados.
+  const ejecutar = async (clave, accion) => {
+    if (procesando) return
+    setProcesando(clave)
+    try { await accion() } finally { setProcesando(null) }
+  }
+  const ocupado = !!procesando
+  const etiqueta = (clave, texto) => (procesando === clave ? 'Procesando...' : texto)
+  const conBloqueo = (estilo, extraDeshabilitado = false) => ({
+    ...estilo,
+    opacity: ocupado || extraDeshabilitado ? 0.5 : 1,
+    cursor: ocupado || extraDeshabilitado ? 'not-allowed' : 'pointer',
+  })
 
   return (
-    <div style={s.overlay} onClick={onClose}>
-      <div style={s.modal} onClick={(ev) => ev.stopPropagation()}>
-
-        <div style={s.modalHead}>
+    <Modal onClose={onClose} maxWidth={720} arriba>
+      <div style={s.modalHead}>
+        <div style={s.modalHeadFila}>
           <div>
             <div style={s.folioBig}>Orden · Folio #{orden.folio}</div>
             <div style={{ fontSize:13, color:'#8A8577' }}>
@@ -227,11 +312,24 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
               Descargar PDF
             </button>
             <Badge estado={orden.estado} />
-            <button style={s.btnX} onClick={onClose}>✕</button>
+            <button style={s.btnX} onClick={onClose} aria-label="Cerrar">✕</button>
           </div>
         </div>
 
-        <div style={s.modalBody}>
+        <div style={s.pestanas} role="tablist">
+          {[['detalle', 'Detalle'], ['historial', 'Historial', nHistorial]].map(([k, label, n]) => (
+            <button key={k} role="tab" aria-selected={pestana === k}
+              style={{ ...s.pestana, ...(pestana === k ? s.pestanaActiva : {}) }}
+              onClick={() => setPestana(k)}>
+              {label}
+              {n > 0 && <span style={pestana === k ? s.pestanaCuentaActiva : s.pestanaCuenta}>{n}</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={s.modalBody}>
+        {pestana === 'detalle' && (<>
           {/* Proveedor */}
           <div style={s.box}>
             <div style={s.boxTitle}>Proveedor</div>
@@ -279,7 +377,7 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
                   <label style={s.label}>Tipo de pago</label>
                   <select style={s.input} value={tipoPago}
                     onChange={(ev) => setTipoPago(ev.target.value)}
-                    onBlur={() => onActualizar(orden.id, { tipo_pago: tipoPago })}>
+                    onBlur={() => { if (tipoPago !== orden.tipo_pago) onActualizar(orden.id, { tipo_pago: tipoPago }) }}>
                     {METODOS_PAGO.map(([valor, label]) =>
                       <option key={valor} value={valor}>{label}</option>
                     )}
@@ -289,7 +387,7 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
                   <label style={s.label}>Observaciones</label>
                   <input style={s.input} value={obs}
                     onChange={(ev) => setObs(ev.target.value)}
-                    onBlur={() => onActualizar(orden.id, { observaciones: obs })}
+                    onBlur={() => { if (obs !== (orden.observaciones || '')) onActualizar(orden.id, { observaciones: obs }) }}
                     placeholder="Notas para el proveedor o autorizador" />
                 </div>
               </div>
@@ -300,25 +398,26 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
           <div style={s.acciones}>
             {/* Eliminar — solo admin, solo borrador o rechazada */}
             {usuario.rol === 'admin' && ['borrador', 'rechazada'].includes(e) && (
-              <button style={{...s.btnDanger, marginRight:'auto'}}
-                onClick={() => onEliminar(orden.id, orden.folio)}>
-                Eliminar orden
+              <button style={{...conBloqueo(s.btnDanger), marginRight:'auto'}} disabled={ocupado}
+                onClick={() => ejecutar('eliminar', () => onEliminar(orden))}>
+                {etiqueta('eliminar', 'Eliminar orden')}
               </button>
             )}
 
             {e === 'borrador' && (
-              <button style={s.btnPrimary}
-                onClick={() => onCambiarEstado(orden.id, 'autorizacion')}>
-                Enviar a autorización →
+              <button style={conBloqueo(s.btnPrimary)} disabled={ocupado}
+                onClick={() => ejecutar('enviar', () => onCambiarEstado(orden, 'autorizacion'))}>
+                {etiqueta('enviar', 'Enviar a autorización →')}
               </button>
             )}
             {e === 'autorizacion' && (<>
-              <button style={s.btnDanger}
-                onClick={() => { const m = prompt('Motivo del rechazo:'); if (m) onCambiarEstado(orden.id, 'rechazada', m) }}>
-                Rechazar
+              <button style={conBloqueo(s.btnDanger)} disabled={ocupado}
+                onClick={() => ejecutar('rechazar', () => onRechazar(orden))}>
+                {etiqueta('rechazar', 'Rechazar')}
               </button>
-              <button style={s.btnOk} onClick={() => onCambiarEstado(orden.id, 'autorizada')}>
-                Autorizar ✓
+              <button style={conBloqueo(s.btnOk)} disabled={ocupado}
+                onClick={() => ejecutar('autorizar', () => onCambiarEstado(orden, 'autorizada'))}>
+                {etiqueta('autorizar', 'Autorizar ✓')}
               </button>
             </>)}
             {e === 'autorizada' && (
@@ -350,9 +449,11 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
                       onChange={(ev) => setPago({...pago, monto: +ev.target.value})} />
                   </div>
                 </div>
-                <button style={{...s.btnPrimary, marginTop:10}} disabled={!pago.referencia}
-                  onClick={() => onPago(orden.id, pago)}>
-                  Registrar pago →
+                <button style={{...conBloqueo(s.btnPrimary, !pago.referencia), marginTop:10}}
+                  disabled={ocupado || !pago.referencia}
+                  title={!pago.referencia ? 'Captura la referencia del pago' : undefined}
+                  onClick={() => ejecutar('pago', () => onPago(orden, pago))}>
+                  {etiqueta('pago', 'Registrar pago →')}
                 </button>
               </div>
             )}
@@ -386,11 +487,13 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
                   </div>
                 </div>
                 <div style={{ display:'flex', gap:10, marginTop:10 }}>
-                  <button style={s.btnGhost} onClick={() => onRecoleccion(orden.id, {...rec, completado: false})}>
-                    Programar
+                  <button style={conBloqueo(s.btnGhost)} disabled={ocupado}
+                    onClick={() => ejecutar('programar', () => onRecoleccion(orden, {...rec, completado: false}))}>
+                    {etiqueta('programar', 'Programar')}
                   </button>
-                  <button style={s.btnOk} onClick={() => onRecoleccion(orden.id, {...rec, completado: true})}>
-                    Marcar recolectado ✓
+                  <button style={conBloqueo(s.btnOk)} disabled={ocupado}
+                    onClick={() => ejecutar('recolectar', () => onRecoleccion(orden, {...rec, completado: true}))}>
+                    {etiqueta('recolectar', 'Marcar recolectado ✓')}
                   </button>
                 </div>
               </div>
@@ -398,11 +501,11 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
             {e === 'cerrada' && <div style={s.pagoInfo}>✓ Orden cerrada.</div>}
             {e === 'rechazada' && <div style={{...s.pagoInfo, background:'#F7DEDE', color:'#B03A3A'}}>✕ Rechazada.</div>}
           </div>
+        </>)}
 
-          {/* Historial */}
-          <div style={{...s.box, marginTop:14}}>
-            <div style={s.boxTitle}>Historial</div>
-            {orden.historial?.length === 0 && (
+        {pestana === 'historial' && (
+          <div style={s.box}>
+            {nHistorial === 0 && (
               <div style={{ fontSize:12.5, color:'#A8A395' }}>Sin eventos registrados.</div>
             )}
             {orden.historial?.map((h) => (
@@ -417,23 +520,37 @@ function ModalOrden({ orden, usuario, onClose, onCambiarEstado, onPago, onRecole
               </div>
             ))}
           </div>
-        </div>
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }
 
 const s = {
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
-            marginBottom:16, gap:16, flexWrap:'wrap' },
+            marginBottom:14, gap:16, flexWrap:'wrap' },
   h2: { fontSize:22, fontWeight:600, margin:0, color:'#26241D' },
   help: { fontSize:13, color:'#8A8577', marginTop:4, maxWidth:420 },
-  msg: { padding:20, color:'#8A8577' },
+  msg: { padding:'0 0 12px', color:'#8A8577', fontSize:13 },
   error: { padding:20, background:'#F7DEDE', color:'#B03A3A', borderRadius:8 },
-  empty: { padding:40, textAlign:'center', color:'#A8A395' },
-  select: { border:'1px solid #E3DFD5', borderRadius:8, padding:'9px 11px', fontSize:14 },
+  empty: { gridColumn:'1 / -1', padding:'40px 20px', textAlign:'center', color:'#8A8577', fontSize:14,
+           background:'#fff', border:'1px dashed #E3DFD5', borderRadius:12 },
+  emptyTitulo: { fontSize:16, fontWeight:600, color:'#26241D', marginBottom:10 },
+  select: { border:'1px solid #E3DFD5', borderRadius:8, padding:'9px 11px', fontSize:14, background:'#fff' },
+  buscador: { display:'flex', alignItems:'center', gap:10, background:'#fff',
+              borderWidth:1, borderStyle:'solid', borderColor:'#E3DFD5',
+              borderRadius:10, padding:'0 12px', marginBottom:16, transition:'border-color 0.15s, box-shadow 0.15s' },
+  buscadorActivo: { borderColor:C.aqua, boxShadow:`0 0 0 3px ${C.aquaBg}` },
+  lupa: { fontSize:18, color:'#A8A395', lineHeight:1 },
+  buscadorInput: { flex:1, border:'none', outline:'none', padding:'11px 0', fontSize:14,
+                   background:'transparent', font:'inherit', color:'#26241D' },
+  conteo: { fontSize:12, fontWeight:600, color:C.aqua, background:C.aquaBg, padding:'3px 9px',
+            borderRadius:20, whiteSpace:'nowrap' },
+  btnLimpiar: { border:'none', background:'#F4F1EA', width:26, height:26, borderRadius:7,
+                cursor:'pointer', fontSize:12, color:'#6B6659' },
   grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px,1fr))', gap:14 },
-  card: { textAlign:'left', background:'#fff', border:'1px solid #E3DFD5', borderRadius:12,
+  card: { textAlign:'left', background:'#fff', borderRadius:12,
+          borderTop:'1px solid #E3DFD5', borderRight:'1px solid #E3DFD5', borderBottom:'1px solid #E3DFD5',
           padding:16, cursor:'pointer', font:'inherit', color:'inherit',
           display:'flex', flexDirection:'column', gap:6 },
   cardTop: { display:'flex', justifyContent:'space-between', alignItems:'center' },
@@ -442,13 +559,18 @@ const s = {
   prov: { fontWeight:600, fontSize:15, lineHeight:1.3 },
   meta: { fontSize:12, color:'#8A8577' },
   total: { fontSize:18, fontWeight:700, marginTop:4 },
-  overlay: { position:'fixed', inset:0, background:'rgba(30,28,22,0.5)', display:'flex',
-             alignItems:'flex-start', justifyContent:'center', padding:'40px 16px', zIndex:50, overflowY:'auto' },
-  modal: { background:'#fff', borderRadius:16, width:'100%', maxWidth:720,
-           boxShadow:'0 30px 80px rgba(0,0,0,0.25)' },
-  modalHead: { display:'flex', justifyContent:'space-between', alignItems:'flex-start',
-               padding:'20px 24px', borderBottom:'1px solid #E3DFD5',
+  modalHead: { padding:'20px 24px 0', borderBottom:'1px solid #E3DFD5',
                position:'sticky', top:0, background:'#fff', borderRadius:'16px 16px 0 0', zIndex:2 },
+  modalHeadFila: { display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:12 },
+  pestanas: { display:'flex', gap:4, marginTop:14 },
+  pestana: { border:'none', background:'none', padding:'10px 14px', fontSize:13.5, fontWeight:500,
+             cursor:'pointer', color:'#8A8577', borderBottom:'2px solid transparent', marginBottom:-1,
+             display:'flex', alignItems:'center', gap:6, font:'inherit' },
+  pestanaActiva: { color:'#26241D', fontWeight:600, borderBottom:`2px solid ${C.aqua}` },
+  pestanaCuenta: { fontSize:11, fontWeight:600, background:'#F4F1EA', color:'#6B6659',
+                   padding:'1px 7px', borderRadius:10 },
+  pestanaCuentaActiva: { fontSize:11, fontWeight:600, background:C.aquaBg, color:C.aqua,
+                         padding:'1px 7px', borderRadius:10 },
   modalBody: { padding:24 },
   box: { border:'1px solid #E3DFD5', borderRadius:10, padding:14, background:'#FCFBF8' },
   boxTitle: { fontSize:11, textTransform:'uppercase', letterSpacing:'0.06em', color:'#8A8577', fontWeight:600, marginBottom:10 },
@@ -462,7 +584,7 @@ const s = {
   pagoBox: { width:'100%', background:'#FCFBF8', border:'1px solid #E3DFD5', borderRadius:10, padding:16 },
   pagoGrid: { display:'grid', gridTemplateColumns:'1fr 1fr', gap:12, marginTop:10 },
   pagoInfo: { background:'#DBE7F7', color:'#1F5AA6', padding:'10px 14px', borderRadius:8, fontSize:13, fontWeight:500 },
-  histLine: { display:'flex', gap:12, fontSize:12.5, padding:'5px 0', borderBottom:'1px dashed #E3DFD5' },
+  histLine: { display:'flex', gap:12, fontSize:12.5, padding:'7px 0', borderBottom:'1px dashed #E3DFD5' },
   histTime: { color:'#A8A395', minWidth:110 },
   histUser: { color:'#A8A395' },
   label: { display:'block', fontSize:12, color:'#8A8577', marginBottom:5, fontWeight:500 },
@@ -470,7 +592,7 @@ const s = {
   btnPrimary: { background:'#26241D', color:'#fff', border:'none', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
   btnOk: { background:'#2E6B4F', color:'#fff', border:'none', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
   btnDanger: { background:'#fff', color:'#B03A3A', border:'1px solid #E9C9C9', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
-  btnGhost: { background:'transparent', border:'1px solid #E3DFD5', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer' },
+  btnGhost: { background:'#fff', border:'1px solid #E3DFD5', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', color:'#26241D' },
   btnX: { border:'none', background:'#F4F1EA', width:30, height:30, borderRadius:8, cursor:'pointer', fontSize:14, color:'#6B6659' },
   btnPdf: { background:'#fff', color:'#26241D', border:'1px solid #E3DFD5', padding:'7px 13px',
             borderRadius:8, fontSize:12.5, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' },

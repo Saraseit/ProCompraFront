@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react'
 import api from '../api'
+import { mensajeError } from '../constants'
+import Modal, { ModalHead, Label } from '../ui/Modal'
+import { useToast, useConfirm } from '../ui/feedback-context'
 
 const ROLES = ['admin', 'compras', 'almacen', 'pagos']
 
@@ -8,6 +11,8 @@ export default function Usuarios({ usuario }) {
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
   const [form, setForm] = useState(null)
+  const toast = useToast()
+  const confirmar = useConfirm()
 
   useEffect(() => {
     const timer = setTimeout(() => cargarUsuarios(), 300)
@@ -21,38 +26,52 @@ export default function Usuarios({ usuario }) {
       const res = await api.get('/usuarios')
       setUsuarios(res.data)
     } catch (e) {
-      setError('Error al cargar usuarios: ' + (e.response?.data?.detail || e.message))
+      setError('Error al cargar usuarios: ' + mensajeError(e))
     }
     setCargando(false)
   }
 
+  // Devuelve true si se guardó, para que el modal sepa si debe liberar el botón.
   async function crearUsuario(datos) {
     try {
       await api.post('/usuarios', datos)
+      toast(`Usuario "${datos.nombre}" creado`)
       setForm(null)
       cargarUsuarios()
+      return true
     } catch (e) {
-      alert('Error al crear: ' + (e.response?.data?.detail || e.message))
+      toast('Error al crear: ' + mensajeError(e), 'error')
+      return false
     }
   }
 
   async function actualizarUsuario(id, datos) {
     try {
       await api.put(`/usuarios/${id}`, datos)
+      toast('Usuario actualizado')
       setForm(null)
       cargarUsuarios()
+      return true
     } catch (e) {
-      alert('Error al actualizar: ' + (e.response?.data?.detail || e.message))
+      toast('Error al actualizar: ' + mensajeError(e), 'error')
+      return false
     }
   }
 
   async function desactivarUsuario(id, nombre) {
-    if (!confirm(`¿Desactivar a "${nombre}"? Ya no podrá entrar al sistema.`)) return
+    const ok = await confirmar({
+      titulo: 'Desactivar usuario',
+      mensaje: `¿Desactivar a "${nombre}"? Ya no podrá entrar al sistema.`,
+      textoBoton: 'Desactivar',
+      peligro: true,
+    })
+    if (!ok) return
     try {
       await api.delete(`/usuarios/${id}`)
+      toast(`Usuario "${nombre}" desactivado`)
       cargarUsuarios()
     } catch (e) {
-      alert('Error: ' + (e.response?.data?.detail || e.message))
+      toast('Error: ' + mensajeError(e), 'error')
     }
   }
 
@@ -146,68 +165,73 @@ export default function Usuarios({ usuario }) {
 
 function ModalUsuario({ data, usuarioActual, onClose, onSave }) {
   const [form, setForm] = useState(data)
+  const [guardando, setGuardando] = useState(false)
   const set = (k, v) => setForm({ ...form, [k]: v })
   const esNuevo = form.esNuevo
+  const completo = form.nombre && (!esNuevo || (form.correo && form.password))
+  const puedeGuardar = completo && !guardando
+
+  async function guardar() {
+    if (!puedeGuardar) return
+    setGuardando(true)
+    const { esNuevo: _, ...datos } = form
+    const ok = await onSave(datos)
+    if (!ok) setGuardando(false)
+  }
 
   return (
-    <div style={s.overlay} onClick={onClose}>
-      <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-        <div style={s.modalHead}>
-          <h3 style={s.h3}>{esNuevo ? 'Nuevo usuario' : 'Editar usuario'}</h3>
-          <button style={s.btnX} onClick={onClose}>✕</button>
-        </div>
-        <div style={{ padding: '16px 24px 24px' }}>
-          <Field label="Nombre completo">
-            <input style={s.input} value={form.nombre || ''}
-              onChange={(e) => set('nombre', e.target.value)} autoFocus />
-          </Field>
+    <Modal onClose={onClose} maxWidth={460}>
+      <ModalHead titulo={esNuevo ? 'Nuevo usuario' : 'Editar usuario'} onClose={onClose} />
+      <div style={{ padding: '16px 24px 24px' }}>
+        <Field label="Nombre completo" requerido>
+          <input style={s.input} value={form.nombre || ''}
+            onChange={(e) => set('nombre', e.target.value)} autoFocus />
+        </Field>
 
-          {esNuevo && (
-            <>
-              <Field label="Correo">
-                <input type="email" style={s.input} value={form.correo || ''}
-                  onChange={(e) => set('correo', e.target.value)} />
-              </Field>
-              <Field label="Contraseña inicial">
-                <input type="password" style={s.input} value={form.password || ''}
-                  onChange={(e) => set('password', e.target.value)}
-                  placeholder="Mínimo 6 caracteres" />
-              </Field>
-            </>
+        {esNuevo && (
+          <>
+            <Field label="Correo" requerido>
+              <input type="email" style={s.input} value={form.correo || ''}
+                onChange={(e) => set('correo', e.target.value)} />
+            </Field>
+            <Field label="Contraseña inicial" requerido>
+              <input type="password" style={s.input} value={form.password || ''}
+                onChange={(e) => set('password', e.target.value)}
+                placeholder="Mínimo 6 caracteres" />
+            </Field>
+          </>
+        )}
+
+        <Field label="Rol" requerido>
+          <select style={s.input} value={form.rol || 'compras'}
+            onChange={(e) => set('rol', e.target.value)}
+            disabled={form.id === usuarioActual.id}>
+            {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+          </select>
+          {form.id === usuarioActual.id && (
+            <span style={{ fontSize: 11, color: '#8A8577', marginTop: 4, display: 'block' }}>
+              No puedes cambiar tu propio rol
+            </span>
           )}
+        </Field>
 
-          <Field label="Rol">
-            <select style={s.input} value={form.rol || 'compras'}
-              onChange={(e) => set('rol', e.target.value)}
-              disabled={form.id === usuarioActual.id}>
-              {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-            </select>
-            {form.id === usuarioActual.id && (
-              <span style={{ fontSize: 11, color: '#8A8577', marginTop: 4, display: 'block' }}>
-                No puedes cambiar tu propio rol
-              </span>
-            )}
-          </Field>
-
-          <button
-            style={{ ...s.btnPrimary, width: '100%', marginTop: 16 }}
-            disabled={!form.nombre || (esNuevo && (!form.correo || !form.password))}
-            onClick={() => {
-              const { esNuevo: _, ...datos } = form
-              onSave(datos)
-            }}>
-            {esNuevo ? 'Crear usuario' : 'Guardar cambios'}
-          </button>
-        </div>
+        <button
+          style={{ ...s.btnPrimary, width: '100%', marginTop: 16,
+                   opacity: puedeGuardar ? 1 : 0.45,
+                   cursor: puedeGuardar ? 'pointer' : 'not-allowed' }}
+          disabled={!puedeGuardar}
+          onClick={guardar}>
+          {guardando ? 'Guardando...' : esNuevo ? 'Crear usuario' : 'Guardar cambios'}
+        </button>
       </div>
-    </div>
+    </Modal>
   )
 }
 
-function Field({ label, children }) {
+function Field({ label, requerido, children }) {
   return (
     <label style={{ display: 'block', marginBottom: 12 }}>
-      <span style={s.label}>{label}</span>
+      <Label requerido={requerido}>{label}</Label>
       {children}
     </label>
   )
@@ -216,7 +240,6 @@ function Field({ label, children }) {
 const s = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16, gap: 16 },
   h2: { fontSize: 22, fontWeight: 600, margin: 0, color: '#26241D' },
-  h3: { fontSize: 18, fontWeight: 600, margin: 0, color: '#26241D' },
   help: { fontSize: 13, color: '#8A8577', marginTop: 4 },
   error: { padding: 20, background: '#F7DEDE', color: '#B03A3A', borderRadius: 8 },
   empty: { textAlign: 'center', color: '#A8A395', padding: 26 },
@@ -225,13 +248,8 @@ const s = {
   th: { textAlign: 'left', padding: '11px 14px', background: '#F4F1EA', color: '#6B6659', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid #E3DFD5' },
   td: { padding: '11px 14px', borderBottom: '1px solid #EFEBE2' },
   badge: { fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20 },
-  label: { display: 'block', fontSize: 12, color: '#8A8577', marginBottom: 5, fontWeight: 500 },
-  overlay: { position: 'fixed', inset: 0, background: 'rgba(30,28,22,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, zIndex: 50 },
-  modal: { background: '#fff', borderRadius: 16, width: '100%', maxWidth: 460, boxShadow: '0 30px 80px rgba(0,0,0,0.25)' },
-  modalHead: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 24px', borderBottom: '1px solid #E3DFD5' },
   input: { width: '100%', border: '1px solid #E3DFD5', borderRadius: 8, padding: '9px 11px', fontSize: 14, boxSizing: 'border-box' },
   btnPrimary: { background: '#26241D', color: '#fff', border: 'none', padding: '10px 16px', borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnGhost: { background: 'transparent', border: '1px solid #E3DFD5', padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer' },
   btnDanger: { background: '#fff', color: '#B03A3A', border: '1px solid #E9C9C9', padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer' },
-  btnX: { border: 'none', background: '#F4F1EA', width: 30, height: 30, borderRadius: 8, cursor: 'pointer', fontSize: 14, color: '#6B6659' },
 }

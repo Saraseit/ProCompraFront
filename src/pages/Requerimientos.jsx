@@ -1,10 +1,19 @@
 import { useState, useEffect, useMemo } from 'react'
 import api from '../api'
-import { money, mensajeError } from '../constants'
+import { money, mensajeError, PROVEEDOR_VACIO } from '../constants'
+import Modal, { ModalHead, Label } from '../ui/Modal'
+import { useToast } from '../ui/feedback-context'
+import { C } from '../ui/tema'
+import { ModalProveedor } from './Proveedores'
 
 const UNIDADES = ["PZA","CAJA","LITRO","KILO","CUBETA","BOTE","CORTE","GALON","MTR","ROLLO","SERVICIO","PAQUETE"]
 
-export default function Requerimientos({ usuario, onOrdenCreada }) {
+const REQ_VACIO = {
+  descripcion: '', cantidad: 1, unidad: 'PZA',
+  precio_estimado: 0, contrato: '', proveedor_sug: '',
+}
+
+export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
   const [requerimientos, setRequerimientos] = useState([])
   const [proveedores, setProveedores] = useState([])
   const [cargando, setCargando] = useState(true)
@@ -13,6 +22,7 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
   const [editando, setEditando] = useState(null)
   const [sel, setSel] = useState({})
   const [generando, setGenerando] = useState(false)
+  const toast = useToast()
 
   useEffect(() => {
     const timer = setTimeout(async () => {
@@ -34,27 +44,40 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
   async function recargarReqs() {
     const reqRes = await api.get('/requerimientos?estado=pendiente')
     setRequerimientos(reqRes.data)
+    if (onCambio) onCambio()
   }
 
+  // Devuelven true si se guardó, para que el modal sepa si debe liberar el botón.
   async function crearRequerimiento(datos) {
     try {
       await api.post('/requerimientos', { ...datos, solicitante_id: usuario.id })
+      toast('Requerimiento creado')
       setNuevo(null)
       await recargarReqs()
+      return true
     } catch (e) {
-      alert('Error al crear: ' + mensajeError(e))
+      toast('Error al crear: ' + mensajeError(e), 'error')
+      return false
     }
   }
 
   async function editarRequerimiento(id, datos) {
     try {
       await api.put(`/requerimientos/${id}`, datos)
+      toast('Requerimiento actualizado')
       setEditando(null)
       await recargarReqs()
+      return true
     } catch (e) {
-      alert('Error al editar: ' + mensajeError(e))
+      toast('Error al editar: ' + mensajeError(e), 'error')
+      return false
     }
   }
+
+  // Un proveedor dado de alta desde el formulario se agrega a la lista local.
+  const agregarProveedor = (p) =>
+    setProveedores((lista) =>
+      [...lista, p].sort((a, b) => a.nombre.localeCompare(b.nombre, 'es')))
 
   const seleccionados = requerimientos.filter((r) => sel[r.id])
 
@@ -89,12 +112,14 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
         })
         creadas++
       }
+      toast(creadas === 1 ? 'Se generó 1 orden de compra' : `Se generaron ${creadas} órdenes de compra`)
       if (onOrdenCreada) onOrdenCreada()
     } catch (e) {
       // Las órdenes ya creadas no se revierten: se avisa cuántas quedaron.
-      alert(
-        `Se generaron ${creadas} de ${grupos.length} orden(es).\n` +
-        `La orden de ${grupos[creadas]?.provNombre || '—'} falló: ${mensajeError(e)}`
+      toast(
+        `Se generaron ${creadas} de ${grupos.length} orden(es). ` +
+        `La orden de ${grupos[creadas]?.provNombre || '—'} falló: ${mensajeError(e)}`,
+        'error'
       )
     } finally {
       setSel({})
@@ -106,6 +131,7 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
   const toggle = (id) => setSel((s) => ({ ...s, [id]: !s[id] }))
   const nSel = seleccionados.length
   const puedeEditar = ['admin', 'compras'].includes(usuario.rol)
+  const abrirNuevo = () => setNuevo({ ...REQ_VACIO })
 
   const todosSeleccionados = requerimientos.length > 0 && nSel === requerimientos.length
   const alternarTodos = () =>
@@ -130,10 +156,7 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
           </p>
         </div>
         <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-          <button style={s.btnGhostLg} onClick={() => setNuevo({
-            descripcion: '', cantidad: 1, unidad: 'PZA',
-            precio_estimado: 0, contrato: '', proveedor_sug: '',
-          })}>
+          <button style={s.btnGhostLg} onClick={abrirNuevo}>
             + Nuevo requerimiento
           </button>
           <button
@@ -194,7 +217,13 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
           </thead>
           <tbody>
             {requerimientos.length === 0 && (
-              <tr><td colSpan={puedeEditar ? 8 : 7} style={s.empty}>No hay requerimientos pendientes.</td></tr>
+              <tr><td colSpan={puedeEditar ? 8 : 7} style={s.empty}>
+                <div style={s.emptyTitulo}>Todo listo.</div>
+                <div>Agrega un requerimiento para empezar.</div>
+                <button style={{ ...s.btnPrimary, marginTop:14 }} onClick={abrirNuevo}>
+                  + Nuevo requerimiento
+                </button>
+              </td></tr>
             )}
             {requerimientos.map((r) => (
               <tr key={r.id} style={sel[r.id] ? { background:'#FBF3EF' } : {}}>
@@ -226,6 +255,8 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
           data={nuevo}
           setData={setNuevo}
           proveedores={proveedores}
+          puedeCrearProveedor={puedeEditar}
+          onProveedorCreado={agregarProveedor}
           onClose={() => setNuevo(null)}
           onSave={crearRequerimiento}
         />
@@ -236,6 +267,8 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
           data={editando}
           setData={setEditando}
           proveedores={proveedores}
+          puedeCrearProveedor={puedeEditar}
+          onProveedorCreado={agregarProveedor}
           onClose={() => setEditando(null)}
           onSave={(datos) => editarRequerimiento(editando.id, datos)}
         />
@@ -244,8 +277,10 @@ export default function Requerimientos({ usuario, onOrdenCreada }) {
   )
 }
 
-function ModalReq({ data, setData, proveedores, onClose, onSave }) {
-  const set = (k, v) => setData({ ...data, [k]: v })
+function ModalReq({ data, setData, proveedores, puedeCrearProveedor, onProveedorCreado, onClose, onSave }) {
+  const [guardando, setGuardando] = useState(false)
+  const [altaProveedor, setAltaProveedor] = useState(null)
+  const set = (k, v) => setData((d) => ({ ...d, [k]: v }))
   const esNuevo = !data.id
 
   const descripcion = (data.descripcion || '').trim()
@@ -255,55 +290,62 @@ function ModalReq({ data, setData, proveedores, onClose, onSave }) {
   if (!descripcion) errores.push('La descripción es obligatoria.')
   if (!(cantidad > 0)) errores.push('La cantidad debe ser mayor que cero.')
   if (!(precio >= 0)) errores.push('El precio estimado no puede ser negativo.')
-  const puedeGuardar = errores.length === 0
+  const puedeGuardar = errores.length === 0 && !guardando
 
-  const guardar = () => onSave({
-    ...data,
-    descripcion,
-    cantidad,
-    precio_estimado: precio,
-    contrato: (data.contrato || '').trim() || null,
-    proveedor_sug: data.proveedor_sug || null,
-  })
+  async function guardar() {
+    if (!puedeGuardar) return
+    setGuardando(true)
+    const ok = await onSave({
+      ...data,
+      descripcion,
+      cantidad,
+      precio_estimado: precio,
+      contrato: (data.contrato || '').trim() || null,
+      proveedor_sug: data.proveedor_sug || null,
+    })
+    if (!ok) setGuardando(false)
+  }
 
   return (
-    <div style={s.overlay} onClick={onClose}>
-      <div style={s.modal} onClick={(e) => e.stopPropagation()}>
-        <h3 style={s.h3}>{esNuevo ? 'Nuevo requerimiento' : 'Editar requerimiento'}</h3>
-
-        <label style={s.label}>Descripción *</label>
+    <Modal onClose={onClose} maxWidth={480}>
+      <ModalHead titulo={esNuevo ? 'Nuevo requerimiento' : 'Editar requerimiento'} onClose={onClose} />
+      <div style={{ padding:'4px 24px 24px' }}>
+        <Label requerido style={s.labelGap}>Descripción</Label>
         <input style={s.input} value={data.descripcion}
           placeholder="Qué se necesita comprar"
           onChange={(e) => set('descripcion', e.target.value)} autoFocus />
 
         <div style={s.row}>
           <div style={{flex:1}}>
-            <label style={s.label}>Cantidad</label>
+            <Label requerido style={s.labelGap}>Cantidad</Label>
             <input type="number" style={s.input} value={data.cantidad}
               onChange={(e) => set('cantidad', +e.target.value)} />
           </div>
           <div style={{flex:1}}>
-            <label style={s.label}>Unidad</label>
+            <Label requerido style={s.labelGap}>Unidad</Label>
             <select style={s.input} value={data.unidad}
               onChange={(e) => set('unidad', e.target.value)}>
               {UNIDADES.map((u) => <option key={u}>{u}</option>)}
             </select>
           </div>
           <div style={{flex:1}}>
-            <label style={s.label}>Precio est.</label>
+            <Label style={s.labelGap}>Precio est.</Label>
             <input type="number" style={s.input} value={data.precio_estimado}
               onChange={(e) => set('precio_estimado', +e.target.value)} />
           </div>
         </div>
 
-        <label style={s.label}>Proveedor sugerido</label>
+        <Label style={s.labelGap}>Proveedor sugerido</Label>
         <ComboProveedor
           proveedores={proveedores}
           valor={data.proveedor_sug}
           onChange={(id) => set('proveedor_sug', id)}
+          onAgregar={puedeCrearProveedor
+            ? (texto) => setAltaProveedor({ ...PROVEEDOR_VACIO, nombre: texto })
+            : null}
         />
 
-        <label style={s.label}>Contrato (opcional)</label>
+        <Label style={s.labelGap}>Contrato (opcional)</Label>
         <input style={s.input} value={data.contrato || ''}
           onChange={(e) => set('contrato', e.target.value)} />
 
@@ -311,19 +353,32 @@ function ModalReq({ data, setData, proveedores, onClose, onSave }) {
           <div style={s.avisoError}>{errores[0]}</div>
         )}
 
-        <button style={{ ...s.btnPrimary, width:'100%', marginTop:12,
+        <button style={{ ...s.btnPrimary, width:'100%', marginTop:16,
                          opacity: puedeGuardar ? 1 : 0.45,
                          cursor: puedeGuardar ? 'pointer' : 'not-allowed' }}
           disabled={!puedeGuardar}
           onClick={guardar}>
-          {esNuevo ? 'Guardar requerimiento' : 'Guardar cambios'}
+          {guardando ? 'Guardando...' : esNuevo ? 'Guardar requerimiento' : 'Guardar cambios'}
         </button>
       </div>
-    </div>
+
+      {altaProveedor && (
+        <ModalProveedor
+          data={altaProveedor}
+          zIndex={70}
+          onClose={() => setAltaProveedor(null)}
+          onGuardado={(p) => {
+            onProveedorCreado(p)
+            set('proveedor_sug', p.id)
+            setAltaProveedor(null)
+          }}
+        />
+      )}
+    </Modal>
   )
 }
 
-function ComboProveedor({ proveedores, valor, onChange }) {
+function ComboProveedor({ proveedores, valor, onChange, onAgregar }) {
   const [abierto, setAbierto] = useState(false)
   const [texto, setTexto] = useState('')
 
@@ -373,6 +428,16 @@ function ComboProveedor({ proveedores, valor, onChange }) {
               +{coincidencias.length - opciones.length} más — sigue escribiendo para acotar.
             </div>
           )}
+          {onAgregar && (
+            <div style={s.comboNuevo}
+              onMouseDown={(e) => {
+                e.preventDefault()
+                setAbierto(false)
+                onAgregar(texto.trim())
+              }}>
+              + Agregar nuevo proveedor{texto.trim() ? ` "${texto.trim()}"` : ''}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -383,14 +448,14 @@ const s = {
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
             marginBottom:16, gap:16, flexWrap:'wrap' },
   h2: { fontSize:22, fontWeight:600, margin:0, color:'#26241D' },
-  h3: { fontSize:18, fontWeight:600, marginTop:0, color:'#26241D' },
   help: { fontSize:13, color:'#8A8577', marginTop:4 },
   card: { background:'#fff', border:'1px solid #E3DFD5', borderRadius:12, overflow:'hidden' },
   table: { width:'100%', borderCollapse:'collapse', fontSize:14 },
   th: { textAlign:'left', padding:'11px 14px', background:'#F4F1EA', color:'#6B6659',
         fontWeight:600, fontSize:11, textTransform:'uppercase', borderBottom:'1px solid #E3DFD5' },
   td: { padding:'11px 14px', borderBottom:'1px solid #EFEBE2' },
-  empty: { textAlign:'center', color:'#A8A395', padding:26 },
+  empty: { textAlign:'center', color:'#8A8577', padding:'34px 26px', fontSize:14 },
+  emptyTitulo: { fontSize:16, fontWeight:600, color:'#26241D', marginBottom:4 },
   msg: { padding:40, color:'#8A8577' },
   error: { padding:20, background:'#F7DEDE', color:'#B03A3A', borderRadius:8 },
   resumen: { marginBottom:12, background:'#FBF3EF', border:'1px solid #EBD9D1',
@@ -405,10 +470,7 @@ const s = {
                 padding:'10px 16px', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
   btnGhost: { background:'transparent', border:'1px solid #E3DFD5', padding:'5px 10px',
               borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer' },
-  overlay: { position:'fixed', inset:0, background:'rgba(30,28,22,0.5)', display:'flex',
-             alignItems:'center', justifyContent:'center', padding:16, zIndex:50 },
-  modal: { background:'#fff', borderRadius:16, padding:28, width:'100%', maxWidth:480 },
-  label: { display:'block', fontSize:12, color:'#8A8577', marginBottom:5, marginTop:12, fontWeight:500 },
+  labelGap: { marginTop:12 },
   input: { width:'100%', border:'1px solid #E3DFD5', borderRadius:8, padding:'9px 11px',
            fontSize:14, boxSizing:'border-box' },
   row: { display:'flex', gap:12 },
@@ -422,4 +484,7 @@ const s = {
                borderBottom:'1px solid #F2EFE8' },
   comboRfc: { fontFamily:'monospace', fontSize:11, color:'#A8A395', whiteSpace:'nowrap' },
   comboMas: { padding:'8px 11px', fontSize:12, color:'#A8A395', background:'#FCFBF8' },
+  comboNuevo: { position:'sticky', bottom:0, padding:'9px 11px', fontSize:13.5, fontWeight:600,
+                cursor:'pointer', color:C.aqua, background:C.aquaBg,
+                borderTop:`1px solid ${C.aqua}` },
 }
