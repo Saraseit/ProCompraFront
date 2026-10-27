@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import api from '../api'
-import { money, mensajeError, PROVEEDOR_VACIO } from '../constants'
+import { money, mensajeError, PROVEEDOR_VACIO, esOperacion } from '../constants'
 import Modal, { ModalHead, Label } from '../ui/Modal'
 import { useToast } from '../ui/feedback-context'
 import { C } from '../ui/tema'
@@ -130,7 +130,8 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
 
   const toggle = (id) => setSel((s) => ({ ...s, [id]: !s[id] }))
   const nSel = seleccionados.length
-  const puedeEditar = ['admin', 'compras'].includes(usuario.rol)
+  // Almacén y compras conviven: los dos capturan, editan y generan órdenes.
+  const puedeEditar = esOperacion(usuario.rol)
   const abrirNuevo = () => setNuevo({ ...REQ_VACIO })
 
   const todosSeleccionados = requerimientos.length > 0 && nSel === requerimientos.length
@@ -159,7 +160,7 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
           <button style={s.btnGhostLg} onClick={abrirNuevo}>
             + Nuevo requerimiento
           </button>
-          <button
+          {puedeEditar && <button
             style={{ ...s.btnPrimary,
                      opacity: puedeGenerar ? 1 : 0.45,
                      cursor: puedeGenerar ? 'pointer' : 'not-allowed' }}
@@ -173,7 +174,7 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
             {generando
               ? 'Generando...'
               : `Generar órdenes de compra${nSel > 0 ? ` (${nSel})` : ''}`}
-          </button>
+          </button>}
         </div>
       </div>
 

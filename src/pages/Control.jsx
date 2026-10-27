@@ -204,7 +204,8 @@ export default function Control() {
                 <td style={s.td}>{etiquetaEstado(o.estado)}</td>
                 <td style={{...s.td, textAlign:'right', fontWeight:600}}>{money(o.total)}</td>
                 <td style={s.td}>
-                  {o.estado === 'cerrada' ? '✓ Recibido' : 'Pendiente'}
+                  {o.estado === 'cerrada' ? '✓ Comprobada'
+                    : o.estado === 'comprobacion' ? 'Recibido · por comprobar' : 'Pendiente'}
                 </td>
               </tr>
             ))}

@@ -41,6 +41,7 @@
   --pc-e-autorizada: #2E6B4F;   --pc-e-autorizada-bg: #DCEEE4;
   --pc-e-pagada: #1F5AA6;       --pc-e-pagada-bg: #DBE7F7;
   --pc-e-recoleccion: #8A3FA6;  --pc-e-recoleccion-bg: #EEE1F5;
+  --pc-e-comprobacion: #157A72; --pc-e-comprobacion-bg: #D9F0EE;
   --pc-e-cerrada: #5A5648;      --pc-e-cerrada-bg: #E4E1D8;
   --pc-e-rechazada: #B03A3A;    --pc-e-rechazada-bg: #F7DEDE;
 }
@@ -91,6 +92,7 @@
   --pc-e-autorizada: #7CCBA5;   --pc-e-autorizada-bg: #1B2F26;
   --pc-e-pagada: #86B2EA;       --pc-e-pagada-bg: #1D2A3F;
   --pc-e-recoleccion: #C88AE0;  --pc-e-recoleccion-bg: #2D1E37;
+  --pc-e-comprobacion: #4FC7BC; --pc-e-comprobacion-bg: #12302D;
   --pc-e-cerrada: #B0AB9C;      --pc-e-cerrada-bg: #2C2A22;
   --pc-e-rechazada: #EA8080;    --pc-e-rechazada-bg: #3A1F1F;
 }

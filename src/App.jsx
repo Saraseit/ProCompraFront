@@ -8,6 +8,8 @@ import Ordenes from './pages/Ordenes'
 import Control from './pages/Control'
 import Proveedores from './pages/Proveedores'
 import Usuarios from './pages/Usuarios'
+import Facturas from './pages/Facturas'
+import { veFacturas } from './constants'
 import { C } from './ui/tema'
 import BotonTema from './ui/BotonTema'
 
@@ -17,7 +19,7 @@ function App() {
   const [cargando, setCargando] = useState(true)
   const [tab, setTab] = useState('inicio')
   const [filtroOrdenes, setFiltroOrdenes] = useState('')
-  const [conteos, setConteos] = useState({ reqs: 0, autorizacion: 0 })
+  const [conteos, setConteos] = useState({ reqs: 0, autorizacion: 0, facturas: 0 })
 
   // El perfil cargado solo cuenta si pertenece a la sesión vigente.
   const usuario = session && perfil?.id === session.user.id ? perfil : null
@@ -57,6 +59,7 @@ function App() {
       setConteos((c) => ({
         reqs: reqs.status === 'fulfilled' ? reqs.value.data.length : c.reqs,
         autorizacion: dash.status === 'fulfilled' ? dash.value.data.en_autorizacion || 0 : c.autorizacion,
+        facturas: dash.status === 'fulfilled' ? dash.value.data.facturas_pendientes || 0 : c.facturas,
       }))
     })
   }, [])
@@ -75,6 +78,7 @@ function App() {
     ['requerimientos', 'Requerimientos', conteos.reqs, 'requerimientos pendientes'],
     ['ordenes', 'Órdenes de compra', conteos.autorizacion, 'órdenes en autorización'],
     ['proveedores', 'Proveedores'],
+    ...(veFacturas(usuario.rol) ? [['facturas', 'Facturas', conteos.facturas, 'facturas sin vincular']] : []),
     ...(['admin','compras','pagos'].includes(usuario.rol) ? [['control','Control de gastos']] : []),
     ...(usuario.rol === 'admin' ? [['usuarios','Usuarios']] : []),
   ]
@@ -130,6 +134,7 @@ function App() {
           <Ordenes usuario={usuario} filtroInicial={filtroOrdenes} onCambio={refrescarConteos} />
         )}
         {tab === 'proveedores' && <Proveedores usuario={usuario} />}
+        {tab === 'facturas' && veFacturas(usuario.rol) && <Facturas onCambio={refrescarConteos} />}
         {tab === 'control' && ['admin','compras','pagos'].includes(usuario.rol) && <Control />}
         {tab === 'usuarios' && usuario.rol === 'admin' && <Usuarios usuario={usuario} />}
       </main>

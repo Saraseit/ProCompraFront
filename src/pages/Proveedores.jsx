@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../api'
-import { mensajeError, PROVEEDOR_VACIO } from '../constants'
+import { mensajeError, PROVEEDOR_VACIO, esOperacion } from '../constants'
 import Modal, { ModalHead, Label } from '../ui/Modal'
 import { useToast, useConfirm } from '../ui/feedback-context'
 
@@ -13,7 +13,7 @@ export default function Proveedores({ usuario }) {
   const toast = useToast()
   const confirmar = useConfirm()
 
-  const puedeEditar = ['admin', 'compras'].includes(usuario.rol)
+  const puedeEditar = esOperacion(usuario.rol)
   const puedeEliminar = usuario.rol === 'admin'
 
   useEffect(() => {

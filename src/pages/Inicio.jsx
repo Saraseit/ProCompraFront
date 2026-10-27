@@ -33,7 +33,7 @@ export default function Inicio({ usuario, onIr }) {
     {
       valor: datos?.en_autorizacion,
       titulo: 'Órdenes en autorización',
-      pie: 'Esperan visto bueno del área de pagos',
+      pie: 'Esperan visto bueno de contabilidad',
       ir: () => onIr('ordenes', 'autorizacion'),
     },
     {
@@ -54,6 +54,18 @@ export default function Inicio({ usuario, onIr }) {
       pie: 'Pagadas y pendientes de recibir',
       ir: () => onIr('ordenes', 'recoleccion'),
     },
+    {
+      valor: datos?.por_comprobar,
+      titulo: 'Órdenes por comprobar',
+      pie: 'Recibidas, falta ticket o factura',
+      ir: () => onIr('ordenes', 'comprobacion'),
+    },
+    ...(datos?.incluye_montos ? [{
+      valor: datos?.facturas_pendientes,
+      titulo: 'Facturas sin vincular',
+      pie: 'XML cargados que esperan su orden',
+      ir: () => onIr('facturas'),
+    }] : []),
   ]
 
   return (
