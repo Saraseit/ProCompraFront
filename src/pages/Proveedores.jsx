@@ -172,6 +172,8 @@ export function ModalProveedor({ data, onClose, onGuardado, zIndex }) {
     setGuardando(true)
     try {
       const datos = { ...form, nombre, dias_credito: dias }
+      // Solo se manda si hay plazo o si se quiere quitar uno que ya existía.
+      if (dias === null && data.dias_credito == null) delete datos.dias_credito
       const res = datos.id
         ? await api.put(`/proveedores/${datos.id}`, datos)
         : await api.post('/proveedores', datos)
