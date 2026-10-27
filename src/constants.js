@@ -78,13 +78,18 @@ export const fechaCorta = (valor) =>
     : '—'
 
 export const PROVEEDOR_VACIO = {
-  nombre: '', rfc: '', correo: '', telefono: '', direccion: '', cuenta_bancaria: '',
+  nombre: '', rfc: '', correo: '', telefono: '', direccion: '', cuenta_bancaria: '', dias_credito: '',
 }
 
-export const hoy = () => new Date().toISOString().slice(0, 10)
+export const hoy = () => isoLocal(new Date())
 
 export const tamanoArchivo = (bytes) => {
   if (!bytes) return ''
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`
 }
+
+// Fecha local en ISO (YYYY-MM-DD). toISOString() usa UTC y después de las
+// 6 p. m. en México ya devuelve el día siguiente.
+export const isoLocal = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`

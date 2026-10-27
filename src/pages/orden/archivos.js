@@ -24,3 +24,26 @@ export async function abrirEnPestana(rutaApi) {
     throw e
   }
 }
+
+export async function descargarPdfOrden(orden) {
+  try {
+    const res = await api.get(`/ordenes/${orden.id}/pdf`, { responseType: 'blob' })
+    const url = URL.createObjectURL(res.data)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `orden-${orden.folio}.pdf`
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    // Con responseType blob el cuerpo del error también llega como Blob.
+    if (e.response?.data instanceof Blob) {
+      try {
+        const detalle = JSON.parse(await e.response.data.text()).detail
+        if (detalle) e.response.data = { detail: detalle }
+      } catch { /* sin detalle legible */ }
+    }
+    throw e
+  }
+}

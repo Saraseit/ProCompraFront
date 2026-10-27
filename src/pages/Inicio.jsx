@@ -65,6 +65,13 @@ export default function Inicio({ usuario, onIr }) {
       titulo: 'Facturas sin vincular',
       pie: 'XML cargados que esperan su orden',
       ir: () => onIr('facturas'),
+    }, {
+      valor: money(datos?.credito_vencido),
+      titulo: 'Crédito vencido',
+      pie: datos?.credito_ordenes_vencidas
+        ? `${datos.credito_ordenes_vencidas} orden(es) a crédito sin pagar a tiempo`
+        : 'Ninguna compra a crédito vencida',
+      ir: () => onIr('credito'),
     }] : []),
   ]
 
