@@ -4,6 +4,7 @@ import { ESTADOS, money, fechaCorta, mensajeError } from '../constants'
 import { useToast } from '../ui/feedback-context'
 import { C } from '../ui/tema'
 import ModalOrden, { Badge } from './orden/ModalOrden'
+import { descargarPdfOrden } from './orden/archivos'
 
 export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
   const [ordenes, setOrdenes] = useState([])
@@ -53,22 +54,9 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
 
   async function descargarPdf(orden) {
     try {
-      const res = await api.get(`/ordenes/${orden.id}/pdf`, { responseType: 'blob' })
-      const url = URL.createObjectURL(res.data)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `orden-${orden.folio}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      await descargarPdfOrden(orden)
     } catch (e) {
-      // Con responseType blob el cuerpo del error también llega como Blob.
-      let detalle = ''
-      if (e.response?.data instanceof Blob) {
-        try { detalle = JSON.parse(await e.response.data.text()).detail } catch { detalle = '' }
-      }
-      toast('No se pudo generar el PDF: ' + (detalle || mensajeError(e)), 'error')
+      toast('No se pudo generar el PDF: ' + mensajeError(e), 'error')
     }
   }
 

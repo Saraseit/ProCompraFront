@@ -88,15 +88,16 @@ export default function Proveedores({ usuario }) {
               <th style={s.th}>Correo</th>
               <th style={s.th}>Teléfono</th>
               <th style={s.th}>Cuenta bancaria</th>
+              <th style={s.th}>Crédito</th>
               {puedeEditar && <th style={s.th}>Acciones</th>}
             </tr>
           </thead>
           <tbody>
             {cargando && (
-              <tr><td colSpan={6} style={s.empty}>Cargando...</td></tr>
+              <tr><td colSpan={7} style={s.empty}>Cargando...</td></tr>
             )}
             {!cargando && filtrados.length === 0 && (
-              <tr><td colSpan={6} style={s.empty}>
+              <tr><td colSpan={7} style={s.empty}>
                 {busqueda ? 'Sin resultados para esa búsqueda.' : (
                   <>
                     Aún no hay proveedores activos.
@@ -118,6 +119,9 @@ export default function Proveedores({ usuario }) {
                 <td style={s.td}>{p.correo || '—'}</td>
                 <td style={s.td}>{p.telefono || '—'}</td>
                 <td style={s.td}>{p.cuenta_bancaria || '—'}</td>
+                <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
+                  {p.dias_credito == null ? '—' : p.dias_credito === 0 ? 'Contado' : `${p.dias_credito} días`}
+                </td>
                 {puedeEditar && (
                   <td style={s.td}>
                     <div style={{ display: 'flex', gap: 8 }}>
@@ -158,13 +162,18 @@ export function ModalProveedor({ data, onClose, onGuardado, zIndex }) {
   const set = (k, v) => setForm({ ...form, [k]: v })
   const esNuevo = !form.id
   const nombre = (form.nombre || '').trim()
-  const puedeGuardar = !!nombre && !guardando
+  const diasTexto = String(form.dias_credito ?? '').trim()
+  const dias = diasTexto === '' ? null : Number(diasTexto)
+  const diasValidos = dias === null || (Number.isInteger(dias) && dias >= 0 && dias <= 365)
+  const puedeGuardar = !!nombre && diasValidos && !guardando
 
   async function guardar() {
     if (!puedeGuardar) return
     setGuardando(true)
     try {
-      const datos = { ...form, nombre }
+      const datos = { ...form, nombre, dias_credito: dias }
+      // Solo se manda si hay plazo o si se quiere quitar uno que ya existía.
+      if (dias === null && data.dias_credito == null) delete datos.dias_credito
       const res = datos.id
         ? await api.put(`/proveedores/${datos.id}`, datos)
         : await api.post('/proveedores', datos)
@@ -202,10 +211,24 @@ export function ModalProveedor({ data, onClose, onGuardado, zIndex }) {
           <input style={s.input} value={form.direccion || ''}
             onChange={(e) => set('direccion', e.target.value)} />
         </Field>
-        <Field label="Cuenta bancaria">
-          <input style={s.input} value={form.cuenta_bancaria || ''}
-            onChange={(e) => set('cuenta_bancaria', e.target.value)} />
-        </Field>
+        <div style={s.twoCol}>
+          <Field label="Cuenta bancaria">
+            <input style={s.input} value={form.cuenta_bancaria || ''}
+              onChange={(e) => set('cuenta_bancaria', e.target.value)} />
+          </Field>
+          <Field label="Días de crédito">
+            <input type="number" min="0" max="365" step="1" style={s.input}
+              placeholder="Sin crédito" value={form.dias_credito ?? ''}
+              onChange={(e) => set('dias_credito', e.target.value)} />
+          </Field>
+        </div>
+        {!diasValidos && (
+          <div style={s.avisoError}>Los días de crédito deben ser un número entero entre 0 y 365.</div>
+        )}
+        <p style={s.nota}>
+          Los días de crédito calculan los vencimientos del estado de cuenta: corren desde la
+          fecha de la factura (o de la recepción, si aún no hay factura).
+        </p>
         <button
           style={{ ...s.btnPrimary, width: '100%', marginTop: 16,
                    opacity: puedeGuardar ? 1 : 0.45,
@@ -240,6 +263,8 @@ const s = {
   td: { padding: '11px 14px', borderBottom: '1px solid var(--pc-linea)' },
   input: { width: '100%', border: '1px solid var(--pc-borde)', borderRadius: 8, padding: '9px 11px', fontSize: 14, boxSizing: 'border-box' },
   twoCol: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 },
+  avisoError: { marginBottom: 8, background: 'var(--pc-rojo-bg)', color: 'var(--pc-rojo)', borderRadius: 8, padding: '8px 11px', fontSize: 12.5 },
+  nota: { fontSize: 12, color: 'var(--pc-gris)', margin: '0 0 4px', lineHeight: 1.45 },
   btnPrimary: { background: 'var(--pc-btn)', color: 'var(--pc-btn-texto)', border: 'none', padding: '10px 16px', borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnGhost: { background: 'transparent', border: '1px solid var(--pc-borde)', padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer' },
   btnDanger: { background: 'var(--pc-superficie)', color: 'var(--pc-rojo)', border: '1px solid var(--pc-rojo-borde)', padding: '6px 12px', borderRadius: 7, fontSize: 12, fontWeight: 500, cursor: 'pointer' },
