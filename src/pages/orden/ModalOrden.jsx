@@ -4,7 +4,8 @@ import {
   ESTADOS, METODOS_PAGO, etiquetaMetodo, money, fechaCorta, mensajeError,
   esOperacion, esContabilidad,
 } from '../../constants'
-import Modal from '../../ui/Modal'
+import { Download, Paperclip, Plus, ArrowRight, Check, CheckCircle2, XCircle, Info } from 'lucide-react'
+import Modal, { BotonCerrar } from '../../ui/Modal'
 import { useToast, useConfirm } from '../../ui/feedback-context'
 import { s, bloqueado } from './estilos'
 import Documentos from './Documentos'
@@ -101,15 +102,17 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
       <div style={s.modalHead}>
         <div style={s.modalHeadFila}>
           <div>
-            <div style={s.folioBig}>Orden · Folio #{orden.folio}</div>
-            <div style={{ fontSize:13, color:'var(--pc-gris)' }}>
-              {fechaCorta(orden.fecha)} · {orden.creador?.nombre} · {etiquetaMetodo(orden.tipo_pago)}
+            <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap' }}>
+              <div style={s.folioBig}>Orden #{orden.folio}</div>
+              <Badge estado={orden.estado} />
+            </div>
+            <div style={{ fontSize:13, color:'var(--pc-gris)', marginTop:3 }}>
+              {orden.proveedor?.nombre} · {fechaCorta(orden.fecha)} · {orden.creador?.nombre} · {etiquetaMetodo(orden.tipo_pago)}
             </div>
           </div>
-          <div style={{ display:'flex', gap:10, alignItems:'center' }}>
-            <button style={s.btnPdf} onClick={() => onDescargarPdf(orden)}>Descargar PDF</button>
-            <Badge estado={orden.estado} />
-            <button style={s.btnX} onClick={onClose} aria-label="Cerrar">✕</button>
+          <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+            <button style={s.btnPdf} onClick={() => onDescargarPdf(orden)}><Download size={14} /> PDF</button>
+            <BotonCerrar onClick={onClose} />
           </div>
         </div>
 
@@ -158,7 +161,7 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
                     <td style={s.td}>{p.cantidad}</td>
                     <td style={s.td}>{p.unidad}</td>
                     <td style={s.td}>{p.concepto}</td>
-                    <td style={{...s.td, fontFamily:'monospace', fontSize:12}}>{p.contrato || '—'}</td>
+                    <td style={{...s.td, fontFamily:'var(--pc-mono)', fontSize:12}}>{p.contrato || '—'}</td>
                     <td style={{...s.td, textAlign:'right'}}>{money(p.precio_unitario)}</td>
                     <td style={{...s.td, textAlign:'right'}}>{money(p.importe)}</td>
                   </tr>
@@ -184,7 +187,7 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
               <span style={{ flex:1, display:'flex', gap:8, flexWrap:'wrap' }}>
                 {cotizaciones.map((c) => (
                   <button key={c.id} style={s.btnChico} onClick={() => abrir(`/adjuntos/${c.id}/url`)}>
-                    📎 {c.nombre_archivo}
+                    <Paperclip size={12} /> {c.nombre_archivo}
                   </button>
                 ))}
               </span>
@@ -192,7 +195,7 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
             {e !== 'rechazada' && e !== 'cerrada' && (
               <BotonArchivo accept={ACEPTA_DOCUMENTOS} disabled={ocupado}
                 style={bloqueado(s.btnAqua, ocupado)} onArchivos={adjuntarCotizacion}>
-                {etiqueta('cotizacion', cotizaciones.length ? '+ Otra' : '+ Adjuntar cotización')}
+                {procesando === 'cotizacion' ? 'Subiendo...' : <><Plus size={14} />{cotizaciones.length ? 'Otra' : 'Adjuntar cotización'}</>}
               </BotonArchivo>
             )}
           </div>
@@ -232,7 +235,7 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
               {op && (
                 <button style={bloqueado(s.btnPrimary, ocupado)} disabled={ocupado}
                   onClick={() => cambiarEstado('enviar', 'autorizacion', null, `Orden #${orden.folio} enviada a autorización`)}>
-                  {etiqueta('enviar', 'Enviar a autorización →')}
+                  {procesando === 'enviar' ? 'Procesando...' : <>Enviar a autorización <ArrowRight size={15} /></>}
                 </button>
               )}
             </div>
@@ -248,11 +251,11 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
               </button>
               <button style={bloqueado(s.btnOk, ocupado)} disabled={ocupado}
                 onClick={() => cambiarEstado('autorizar', 'autorizada', null, `Orden #${orden.folio} autorizada`)}>
-                {etiqueta('autorizar', 'Autorizar ✓')}
+                {procesando === 'autorizar' ? 'Procesando...' : <><Check size={15} /> Autorizar</>}
               </button>
             </div>
           ) : (
-            <div style={s.info}>Esperando autorización de contabilidad.</div>
+            <div style={s.info}><Info size={16} /> Esperando autorización de contabilidad.</div>
           ))}
 
           {e === 'autorizada' && !aCredito && (conta ? (<>
@@ -263,7 +266,7 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
               </button>
             </div>
           </>) : (
-            <div style={s.info}>Autorizada. Contabilidad está procesando el pago.</div>
+            <div style={s.info}><Info size={16} /> Autorizada. Contabilidad está procesando el pago.</div>
           ))}
 
           {aCredito && ['autorizada', 'recoleccion', 'comprobacion', 'cerrada'].includes(e) && conta && (
@@ -286,18 +289,18 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
                     await api.post(`/ordenes/${orden.id}/cerrar`)
                     toast(`Orden #${orden.folio} cerrada`)
                   })}>
-                  {etiqueta('cerrar', 'Cerrar orden ✓')}
+                  {procesando === 'cerrar' ? 'Procesando...' : <><Check size={15} /> Cerrar orden</>}
                 </button>
               </div>
             ) : (
-              <div style={s.info}>Comprobación enviada. Contabilidad la revisará para cerrar la orden.</div>
+              <div style={s.info}><Info size={16} /> Comprobación enviada. Contabilidad la revisará para cerrar la orden.</div>
             ))}
           </>)}
 
-          {e === 'cerrada' && <div style={s.infoOk}>✓ Orden cerrada con comprobación revisada.</div>}
+          {e === 'cerrada' && <div style={s.infoOk}><CheckCircle2 size={16} /> Orden cerrada con comprobación revisada.</div>}
           {e === 'rechazada' && (
             <div style={s.avisoError}>
-              ✕ Orden cancelada{ultimaCancelacion?.detalle ? `: ${ultimaCancelacion.detalle}` : '.'}
+              <XCircle size={16} /> Orden cancelada{ultimaCancelacion?.detalle ? `: ${ultimaCancelacion.detalle}` : '.'}
             </div>
           )}
         </>)}

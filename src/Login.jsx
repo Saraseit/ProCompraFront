@@ -1,10 +1,18 @@
 import { useState } from 'react'
+import { Mail, Lock, Eye, EyeOff, ArrowRight, ClipboardCheck, Wallet, FileCheck2 } from 'lucide-react'
 import { supabase } from './supabaseClient'
 import BotonTema from './ui/BotonTema'
+
+const PUNTOS = [
+  [ClipboardCheck, 'Requerimientos y órdenes en un solo lugar'],
+  [Wallet, 'Autorización, pagos y crédito con proveedores'],
+  [FileCheck2, 'Comprobación con tickets y facturas CFDI'],
+]
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [verClave, setVerClave] = useState(false)
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(false)
 
@@ -25,66 +33,84 @@ export default function Login() {
   }
 
   return (
-    <div style={styles.wrap}>
-      <BotonTema style={{ position: 'fixed', top: 16, right: 16 }} />
-      <div style={styles.card}>
-        <div style={styles.brand}>MINIMAL 4.0</div>
-        <div style={styles.sub}>ProCompra</div>
+    <div className="pc-login">
+      <section className="pc-login-marca" aria-hidden>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="pc-marca-logo" style={{ background: '#FAF8F3', color: '#26241D' }}>M4</div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>ProCompra</div>
+            <div style={{ fontSize: 12, opacity: 0.6, letterSpacing: '0.04em' }}>MINIMAL 4.0</div>
+          </div>
+        </div>
+        <div>
+          <h1 style={s.lema}>Compras claras,<br />de la solicitud al cierre.</h1>
+          <ul style={s.puntos}>
+            {PUNTOS.map(([Icono, texto]) => (
+              <li key={texto} style={s.punto}>
+                <span style={s.puntoIcono}><Icono size={16} /></span>
+                {texto}
+              </li>
+            ))}
+          </ul>
+        </div>
+        <div style={{ fontSize: 12, opacity: 0.45 }}>© {new Date().getFullYear()} Minimal 4.0</div>
+      </section>
 
-        <form onSubmit={handleLogin} style={styles.form}>
-          <label style={styles.label}>Correo</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            style={styles.input}
-            required
-          />
+      <section className="pc-login-form">
+        <BotonTema style={{ position: 'absolute', top: 18, right: 18 }} />
+        <form onSubmit={handleLogin} style={s.form} className="pc-pagina">
+          <h2 style={s.titulo}>Inicia sesión</h2>
+          <p style={s.sub}>Usa el correo y la contraseña que te dio el administrador.</p>
 
-          <label style={styles.label}>Contraseña</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            style={styles.input}
-            required
-          />
+          <label style={s.label} htmlFor="correo">Correo</label>
+          <div style={s.campo}>
+            <Mail size={16} style={s.icono} />
+            <input id="correo" type="email" autoComplete="email" autoFocus required
+              value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="nombre@empresa.com" style={s.input} />
+          </div>
 
-          {error && <div style={styles.error}>{error}</div>}
+          <label style={s.label} htmlFor="clave">Contraseña</label>
+          <div style={s.campo}>
+            <Lock size={16} style={s.icono} />
+            <input id="clave" type={verClave ? 'text' : 'password'} autoComplete="current-password" required
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••" style={{ ...s.input, paddingRight: 40 }} />
+            <button type="button" style={s.ojo} onClick={() => setVerClave((v) => !v)}
+              aria-label={verClave ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+              {verClave ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
 
-          <button type="submit" style={styles.btn} disabled={cargando}>
-            {cargando ? 'Entrando...' : 'Entrar'}
+          {error && <div style={s.error} role="alert">{error}</div>}
+
+          <button type="submit" style={{ ...s.btn, opacity: cargando ? 0.7 : 1 }} disabled={cargando}>
+            {cargando ? 'Entrando...' : <>Entrar <ArrowRight size={16} /></>}
           </button>
         </form>
-      </div>
+      </section>
     </div>
   )
 }
 
-const styles = {
-  wrap: {
-    minHeight: '100vh', display: 'flex', alignItems: 'center',
-    justifyContent: 'center', background: 'var(--pc-login-fondo)',
-    fontFamily: "'Inter', system-ui, sans-serif",
-  },
-  card: {
-    background: 'var(--pc-superficie)', padding: '40px', borderRadius: '16px',
-    boxShadow: '0 10px 40px rgba(0,0,0,0.08)', width: '360px',
-  },
-  brand: { fontSize: '26px', fontWeight: 700, letterSpacing: '-0.5px', color: 'var(--pc-tinta)' },
-  sub: { fontSize: '14px', color: 'var(--pc-gris)', marginBottom: '28px' },
-  form: { display: 'flex', flexDirection: 'column' },
-  label: { fontSize: '13px', color: 'var(--pc-gris)', marginBottom: '6px', fontWeight: 500 },
-  input: {
-    padding: '11px', border: '1px solid var(--pc-borde)', borderRadius: '8px',
-    marginBottom: '16px', fontSize: '14px',
-  },
-  error: {
-    background: 'var(--pc-rojo-bg)', color: 'var(--pc-rojo)', padding: '10px',
-    borderRadius: '8px', fontSize: '13px', marginBottom: '16px',
-  },
-  btn: {
-    background: 'var(--pc-btn)', color: 'var(--pc-btn-texto)', border: 'none', padding: '12px',
-    borderRadius: '8px', fontSize: '14px', fontWeight: 600, cursor: 'pointer',
-  },
+const s = {
+  lema: { fontSize: 34, lineHeight: 1.15, fontWeight: 650, margin: '0 0 28px', letterSpacing: '-0.03em', color: '#FAF8F3' },
+  puntos: { listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 14 },
+  punto: { display: 'flex', alignItems: 'center', gap: 12, fontSize: 14, color: 'rgba(250,248,243,0.82)' },
+  puntoIcono: { width: 30, height: 30, borderRadius: 8, display: 'grid', placeItems: 'center',
+                background: 'rgba(60,196,184,0.14)', color: '#3CC4B8', flex: 'none' },
+  form: { width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column' },
+  titulo: { fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--pc-tinta)' },
+  sub: { fontSize: 13.5, color: 'var(--pc-gris)', margin: '6px 0 26px' },
+  label: { fontSize: 12.5, color: 'var(--pc-gris-2)', marginBottom: 6, fontWeight: 550 },
+  campo: { position: 'relative', marginBottom: 16 },
+  icono: { position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--pc-gris-3)', pointerEvents: 'none' },
+  input: { width: '100%', padding: '11px 12px 11px 38px', fontSize: 14 },
+  ojo: { position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none',
+         color: 'var(--pc-gris)', cursor: 'pointer', padding: 6, borderRadius: 6, display: 'inline-grid', placeItems: 'center' },
+  error: { background: 'var(--pc-rojo-bg)', color: 'var(--pc-rojo)', padding: '10px 12px',
+           borderRadius: 8, fontSize: 13, marginBottom: 16 },
+  btn: { background: 'var(--pc-btn)', color: 'var(--pc-btn-texto)', border: 'none', padding: '12px',
+         borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 4,
+         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 },
 }

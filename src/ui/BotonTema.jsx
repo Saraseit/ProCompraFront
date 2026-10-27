@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Moon, Sun } from 'lucide-react'
 
 const CLAVE = 'procompra-tema'
 
@@ -19,13 +20,10 @@ export default function BotonTema({ style }) {
   }
 
   return (
-    <button onClick={alternar}
+    <button onClick={alternar} className="pc-icono-btn" style={style}
       title={oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-      aria-label={oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
-      style={{ background: 'none', border: '1px solid var(--pc-borde)', color: 'var(--pc-gris)',
-               width: 34, height: 34, borderRadius: 8, fontSize: 16, cursor: 'pointer',
-               display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...style }}>
-      {oscuro ? '☀' : '☾'}
+      aria-label={oscuro ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}>
+      {oscuro ? <Sun size={15} /> : <Moon size={15} />}
     </button>
   )
 }

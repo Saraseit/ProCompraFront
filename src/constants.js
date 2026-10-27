@@ -15,9 +15,19 @@ export const etiquetaMetodo = (valor) =>
 export const METODOS_CON_ENTREGA = ['efectivo', 'tarjeta_debito', 'tarjeta_credito']
 
 // Quién opera las compras (almacén y compras conviven) y quién maneja el dinero.
+// Contabilidad (pagos) tiene los permisos de admin salvo gestionar usuarios.
 // El backend aplica las mismas reglas; aquí solo deciden qué botones se muestran.
-export const esOperacion = (rol) => ['admin', 'compras', 'almacen'].includes(rol)
+export const esAdmin = (rol) => ['admin', 'pagos'].includes(rol)
+export const esOperacion = (rol) => ['admin', 'pagos', 'compras', 'almacen'].includes(rol)
 export const esContabilidad = (rol) => ['admin', 'pagos'].includes(rol)
+export const ROLES = {
+  admin: 'Administrador',
+  pagos: 'Contabilidad',
+  compras: 'Compras',
+  almacen: 'Almacén',
+}
+export const etiquetaRol = (rol) => ROLES[rol] || rol
+
 export const veFacturas = (rol) => ['admin', 'compras', 'pagos'].includes(rol)
 
 export const TIPOS_ADJUNTO = [

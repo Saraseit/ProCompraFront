@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
+import { ChevronDown } from 'lucide-react'
 import api from '../api'
 import { money, fechaCorta, mensajeError } from '../constants'
 import { useToast } from '../ui/feedback-context'
 import { C } from '../ui/tema'
 import ModalOrden from './orden/ModalOrden'
 import { descargarPdfOrden } from './orden/archivos'
+import { CargaTarjetas } from '../ui/Carga'
 
 const SITUACION = {
   vencida:    { label: 'Vencida',    color: 'var(--pc-rojo)',        bg: 'var(--pc-rojo-bg)' },
@@ -80,7 +82,7 @@ export default function Credito({ usuario, onCambio }) {
   }
 
   if (error) return <div style={s.error}>{error}</div>
-  if (!datos) return <div style={s.msg}>Cargando estado de cuenta...</div>
+  if (!datos) return <CargaTarjetas n={3} alto={110} minimo={220} />
 
   const { totales } = datos
   const proveedores = verLiquidadas ? datos.proveedores : datos.proveedores.filter((p) => p.saldo > 0)
@@ -148,7 +150,7 @@ export default function Credito({ usuario, onCambio }) {
                 <div style={{ minWidth: 0 }}>
                   <div style={s.prov}>{p.nombre}</div>
                   <div style={s.meta}>
-                    {p.rfc && <span style={{ fontFamily: 'monospace' }}>{p.rfc} · </span>}
+                    {p.rfc && <span style={{ fontFamily: 'var(--pc-mono)' }}>{p.rfc} · </span>}
                     {p.dias_credito == null
                       ? <span style={{ color: 'var(--pc-ambar-texto)' }}>sin días de crédito</span>
                       : `${p.dias_credito} días de crédito`}
@@ -166,7 +168,7 @@ export default function Credito({ usuario, onCambio }) {
                     <div style={s.cifraV}>{money(p.saldo)}</div>
                     <div style={s.cifraT}>saldo</div>
                   </div>
-                  <span style={{ ...s.flecha, transform: abierto ? 'rotate(90deg)' : 'none' }}>›</span>
+                  <ChevronDown size={18} style={{ ...s.flecha, transform: abierto ? 'rotate(180deg)' : 'none' }} />
                 </div>
               </button>
 
@@ -191,7 +193,7 @@ export default function Credito({ usuario, onCambio }) {
                           <td style={s.td}>
                             <button style={s.folio} onClick={() => abrirOrden(m.id)}>#{m.folio}</button>
                           </td>
-                          <td style={{ ...s.td, fontFamily: 'monospace', fontSize: 12 }}>{m.factura || '—'}</td>
+                          <td style={{ ...s.td, fontFamily: 'var(--pc-mono)', fontSize: 12 }}>{m.factura || '—'}</td>
                           <td style={s.td}>
                             {fechaCorta(m.fecha_base)}
                             <div style={s.sub}>{ORIGEN[m.origen_base]}</div>
@@ -244,13 +246,13 @@ export default function Credito({ usuario, onCambio }) {
 
 const s = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16, gap: 16, flexWrap: 'wrap' },
-  h2: { fontSize: 22, fontWeight: 600, margin: 0, color: 'var(--pc-tinta)' },
+  h2: { fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--pc-tinta)', letterSpacing: '-0.022em' },
   help: { fontSize: 13, color: 'var(--pc-gris)', marginTop: 4 },
   msg: { padding: 40, color: 'var(--pc-gris)' },
   error: { padding: 20, background: 'var(--pc-rojo-bg)', color: 'var(--pc-rojo)', borderRadius: 8 },
   toggle: { display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--pc-gris-2)', cursor: 'pointer' },
   kpis: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 16 },
-  kpi: { background: 'var(--pc-superficie)', border: '1px solid var(--pc-borde)', borderRadius: 12, padding: 18 },
+  kpi: { background: 'var(--pc-superficie)', border: '1px solid var(--pc-borde)', borderRadius: 12, padding: 18, boxShadow: 'var(--pc-sombra-1)' },
   kpiV: { fontSize: 24, fontWeight: 700, color: 'var(--pc-tinta)', lineHeight: 1.1 },
   kpiT: { fontSize: 13.5, fontWeight: 600, color: 'var(--pc-tinta)', marginTop: 8 },
   kpiL: { fontSize: 12, color: 'var(--pc-gris)', marginTop: 3 },
@@ -271,7 +273,7 @@ const s = {
   cifra: { textAlign: 'right' },
   cifraV: { fontSize: 17, fontWeight: 700, color: 'var(--pc-tinta)' },
   cifraT: { fontSize: 11, color: 'var(--pc-gris)', textTransform: 'uppercase', letterSpacing: '0.05em' },
-  flecha: { fontSize: 22, color: 'var(--pc-gris-3)', transition: 'transform 0.15s', lineHeight: 1 },
+  flecha: { color: 'var(--pc-gris-3)', transition: 'transform 0.2s', flex: 'none' },
   tablaWrap: { overflowX: 'auto', borderTop: '1px solid var(--pc-borde)' },
   table: { width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 },
   th: { textAlign: 'left', padding: '9px 12px', background: 'var(--pc-superficie-3)', color: 'var(--pc-gris-2)',

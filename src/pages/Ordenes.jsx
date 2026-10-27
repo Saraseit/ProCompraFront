@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
+import { Search, X, Paperclip, ShoppingCart, SearchX, Filter } from 'lucide-react'
 import api from '../api'
 import { ESTADOS, money, fechaCorta, mensajeError } from '../constants'
 import { useToast } from '../ui/feedback-context'
+import { CargaTarjetas } from '../ui/Carga'
+import Vacio from '../ui/Vacio'
 import { C } from '../ui/tema'
 import ModalOrden, { Badge } from './orden/ModalOrden'
 import { descargarPdfOrden } from './orden/archivos'
@@ -91,7 +94,7 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
       </div>
 
       <div style={{ ...s.buscador, ...(buscadorActivo ? s.buscadorActivo : {}) }}>
-        <span style={s.lupa} aria-hidden>⌕</span>
+        <Search size={17} style={s.lupa} aria-hidden />
         <input
           style={s.buscadorInput}
           placeholder="Buscar por folio, proveedor o concepto..."
@@ -106,17 +109,17 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
               {visibles.length} de {ordenes.length}
             </span>
             <button style={s.btnLimpiar} onClick={() => setBusqueda('')} aria-label="Limpiar búsqueda">
-              ✕
+              <X size={13} />
             </button>
           </>
         )}
       </div>
 
-      {cargando && <div style={s.msg}>Cargando órdenes...</div>}
+      {cargando && ordenes.length === 0 && <CargaTarjetas n={8} />}
 
       <div style={s.grid}>
         {visibles.map((o) => (
-          <button key={o.id}
+          <button key={o.id} className="pc-elevable"
             style={{ ...s.card, borderLeft: `4px solid ${(ESTADOS[o.estado] || ESTADOS.borrador).color}` }}
             onClick={() => abrirOrden(o)}>
             <div style={s.cardTop}>
@@ -128,7 +131,9 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
             <div style={s.total}>{money(o.total)}</div>
             <div style={s.meta}>
               Creó: {o.creador?.nombre || '—'}
-              {o.adjuntos?.[0]?.count > 0 && <span title="Documentos adjuntos"> · 📎 {o.adjuntos[0].count}</span>}
+              {o.adjuntos?.[0]?.count > 0 && (
+                <span title="Documentos adjuntos" style={s.clip}><Paperclip size={12} />{o.adjuntos[0].count}</span>
+              )}
             </div>
             {o.estado === 'borrador' && o.motivo_devolucion && (
               <span style={s.devuelta}>Devuelta por contabilidad</span>
@@ -138,20 +143,15 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
         {!cargando && visibles.length === 0 && (
           <div style={s.empty}>
             {termino ? (
-              <>
-                <div style={s.emptyTitulo}>Ninguna orden coincide con “{busqueda.trim()}”.</div>
-                <button style={s.btnGhost} onClick={() => setBusqueda('')}>Limpiar búsqueda</button>
-              </>
+              <Vacio icono={SearchX} titulo={`Ninguna orden coincide con “${busqueda.trim()}”`}
+                accion={<button style={s.btnGhost} onClick={() => setBusqueda('')}>Limpiar búsqueda</button>} />
             ) : filtro ? (
-              <>
-                <div style={s.emptyTitulo}>No hay órdenes en este estado.</div>
-                <button style={s.btnGhost} onClick={() => setFiltro('')}>Ver todas las activas</button>
-              </>
+              <Vacio icono={Filter} titulo="No hay órdenes en este estado"
+                accion={<button style={s.btnGhost} onClick={() => setFiltro('')}>Ver todas las activas</button>} />
             ) : (
-              <>
-                <div style={s.emptyTitulo}>No hay órdenes activas.</div>
-                <div>Genera una desde Requerimientos seleccionando los artículos a comprar.</div>
-              </>
+              <Vacio icono={ShoppingCart} titulo="No hay órdenes activas">
+                Genera una desde Requerimientos seleccionando los artículos a comprar.
+              </Vacio>
             )}
           </div>
         )}
@@ -174,7 +174,7 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
 const s = {
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
             marginBottom:14, gap:16, flexWrap:'wrap' },
-  h2: { fontSize:22, fontWeight:600, margin:0, color:'var(--pc-tinta)' },
+  h2: { fontSize:24, fontWeight:700, margin:0, color:'var(--pc-tinta)', letterSpacing:'-0.022em' },
   help: { fontSize:13, color:'var(--pc-gris)', marginTop:4, maxWidth:420 },
   msg: { padding:'0 0 12px', color:'var(--pc-gris)', fontSize:13 },
   error: { padding:20, background:'var(--pc-rojo-bg)', color:'var(--pc-rojo)', borderRadius:8 },
@@ -186,13 +186,13 @@ const s = {
               borderWidth:1, borderStyle:'solid', borderColor:'var(--pc-borde)',
               borderRadius:10, padding:'0 12px', marginBottom:16, transition:'border-color 0.15s, box-shadow 0.15s' },
   buscadorActivo: { borderColor:C.aqua, boxShadow:`0 0 0 3px ${C.aquaBg}` },
-  lupa: { fontSize:18, color:'var(--pc-gris-3)', lineHeight:1 },
+  lupa: { color:'var(--pc-gris-3)', flex:'none' },
   buscadorInput: { flex:1, border:'none', outline:'none', padding:'11px 0', fontSize:14,
                    background:'transparent', font:'inherit', color:'var(--pc-tinta)' },
   conteo: { fontSize:12, fontWeight:600, color:C.aqua, background:C.aquaBg, padding:'3px 9px',
             borderRadius:20, whiteSpace:'nowrap' },
   btnLimpiar: { border:'none', background:'var(--pc-superficie-3)', width:26, height:26, borderRadius:7,
-                cursor:'pointer', fontSize:12, color:'var(--pc-gris-2)' },
+                cursor:'pointer', color:'var(--pc-gris-2)', display:'inline-grid', placeItems:'center' },
   grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px,1fr))', gap:14 },
   card: { textAlign:'left', background:'var(--pc-superficie)', borderRadius:12,
           borderTop:'1px solid var(--pc-borde)', borderRight:'1px solid var(--pc-borde)', borderBottom:'1px solid var(--pc-borde)',
@@ -201,7 +201,8 @@ const s = {
   cardTop: { display:'flex', justifyContent:'space-between', alignItems:'center' },
   folioTag: { fontSize:12, fontWeight:600, color:'var(--pc-gris-2)', letterSpacing:'0.02em' },
   prov: { fontWeight:600, fontSize:15, lineHeight:1.3 },
-  meta: { fontSize:12, color:'var(--pc-gris)' },
+  meta: { fontSize:12, color:'var(--pc-gris)', display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' },
+  clip: { display:'inline-flex', alignItems:'center', gap:3, color:'var(--pc-gris-2)' },
   total: { fontSize:18, fontWeight:700, marginTop:4 },
   btnGhost: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', color:'var(--pc-tinta)' },
   devuelta: { alignSelf:'flex-start', fontSize:11, fontWeight:600, color:'var(--pc-ambar-texto)',

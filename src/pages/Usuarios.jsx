@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { Plus } from 'lucide-react'
 import api from '../api'
-import { mensajeError } from '../constants'
+import { mensajeError, etiquetaRol } from '../constants'
 import Modal, { ModalHead, Label } from '../ui/Modal'
 import { useToast, useConfirm } from '../ui/feedback-context'
+import { FilasCarga } from '../ui/Carga'
 
 const ROLES = ['admin', 'compras', 'almacen', 'pagos']
 
@@ -87,7 +89,7 @@ export default function Usuarios({ usuario }) {
         <button style={s.btnPrimary} onClick={() => setForm({
           nombre: '', correo: '', password: '', rol: 'compras', esNuevo: true
         })}>
-          + Nuevo usuario
+          <Plus size={16} /> Nuevo usuario
         </button>
       </div>
 
@@ -104,7 +106,7 @@ export default function Usuarios({ usuario }) {
           </thead>
           <tbody>
             {cargando && (
-              <tr><td colSpan={5} style={s.empty}>Cargando...</td></tr>
+              <FilasCarga columnas={5} />
             )}
             {!cargando && usuarios.length === 0 && (
               <tr><td colSpan={5} style={s.empty}>No hay usuarios registrados.</td></tr>
@@ -116,10 +118,10 @@ export default function Usuarios({ usuario }) {
                 <td style={s.td}>
                   <span style={{
                     ...s.badge,
-                    background: u.rol === 'admin' ? 'var(--pc-rojo-bg)' : 'var(--pc-neutro-bg)',
-                    color: u.rol === 'admin' ? 'var(--pc-rojo)' : 'var(--pc-gris-2)',
+                    background: u.rol === 'admin' ? 'var(--pc-acento-bg)' : u.rol === 'pagos' ? 'var(--pc-aqua-bg)' : 'var(--pc-neutro-bg)',
+                    color: u.rol === 'admin' ? 'var(--pc-acento)' : u.rol === 'pagos' ? 'var(--pc-aqua)' : 'var(--pc-gris-2)',
                   }}>
-                    {u.rol}
+                    {etiquetaRol(u.rol)}
                   </span>
                 </td>
                 <td style={s.td}>
@@ -206,7 +208,7 @@ function ModalUsuario({ data, usuarioActual, onClose, onSave }) {
           <select style={s.input} value={form.rol || 'compras'}
             onChange={(e) => set('rol', e.target.value)}
             disabled={form.id === usuarioActual.id}>
-            {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+            {ROLES.map((r) => <option key={r} value={r}>{etiquetaRol(r)}</option>)}
           </select>
           {form.id === usuarioActual.id && (
             <span style={{ fontSize: 11, color: 'var(--pc-gris)', marginTop: 4, display: 'block' }}>
@@ -239,12 +241,12 @@ function Field({ label, requerido, children }) {
 
 const s = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16, gap: 16 },
-  h2: { fontSize: 22, fontWeight: 600, margin: 0, color: 'var(--pc-tinta)' },
+  h2: { fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--pc-tinta)', letterSpacing: '-0.022em' },
   help: { fontSize: 13, color: 'var(--pc-gris)', marginTop: 4 },
   error: { padding: 20, background: 'var(--pc-rojo-bg)', color: 'var(--pc-rojo)', borderRadius: 8 },
   empty: { textAlign: 'center', color: 'var(--pc-gris-3)', padding: 26 },
-  card: { background: 'var(--pc-superficie)', border: '1px solid var(--pc-borde)', borderRadius: 12, overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13.5 },
+  card: { background: 'var(--pc-superficie)', border: '1px solid var(--pc-borde)', borderRadius: 12, overflowX: 'auto', boxShadow: 'var(--pc-sombra-1)' },
+  table: { minWidth:640, width: '100%', borderCollapse: 'collapse', fontSize: 13.5 },
   th: { textAlign: 'left', padding: '11px 14px', background: 'var(--pc-superficie-3)', color: 'var(--pc-gris-2)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid var(--pc-borde)' },
   td: { padding: '11px 14px', borderBottom: '1px solid var(--pc-linea)' },
   badge: { fontSize: 11, fontWeight: 600, padding: '3px 9px', borderRadius: 20 },

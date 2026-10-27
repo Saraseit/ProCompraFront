@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { X, Check, UploadCloud } from 'lucide-react'
 import api from '../api'
 import { money, fechaCorta, mensajeError, etiquetaEstado } from '../constants'
 import Modal, { ModalHead } from '../ui/Modal'
@@ -6,6 +7,7 @@ import { useToast } from '../ui/feedback-context'
 import { C } from '../ui/tema'
 import BotonArchivo from './orden/BotonArchivo'
 import { abrirEnPestana } from './orden/archivos'
+import { FilasCarga } from '../ui/Carga'
 
 const FILTROS = [
   ['pendiente', 'Sin vincular'],
@@ -110,6 +112,7 @@ export default function Facturas({ onCambio }) {
           setArrastrando(false)
           if (!subiendo) subir(Array.from(e.dataTransfer.files || []))
         }}>
+        <div style={s.zonaIcono}><UploadCloud size={22} /></div>
         <div style={{ fontSize:15, fontWeight:600, color:'var(--pc-tinta)' }}>
           {subiendo ? 'Procesando facturas...' : 'Arrastra aquí los XML'}
         </div>
@@ -147,7 +150,7 @@ export default function Facturas({ onCambio }) {
               </tr>
             </thead>
             <tbody>
-              {cargando && <tr><td colSpan={6} style={s.empty}>Cargando...</td></tr>}
+              {cargando && facturas.length === 0 && <FilasCarga columnas={6} filas={4} />}
               {!cargando && facturas.length === 0 && (
                 <tr><td colSpan={6} style={s.empty}>
                   {filtro === 'pendiente'
@@ -161,7 +164,7 @@ export default function Facturas({ onCambio }) {
                     <div style={{ fontWeight:500 }}>{f.nombre_emisor || '—'}</div>
                     <div style={s.rfc}>{f.rfc_emisor}</div>
                   </td>
-                  <td style={{ ...s.td, fontFamily:'monospace', fontSize:12 }}>
+                  <td style={{ ...s.td, fontFamily:'var(--pc-mono)', fontSize:12 }}>
                     {(f.serie || '') + (f.folio || '') || '—'}
                   </td>
                   <td style={s.td}>{fechaCorta(f.fecha_emision)}</td>
@@ -228,7 +231,7 @@ function ResultadoCarga({ carga, onCerrar }) {
               {verDetalle ? 'Ocultar detalle' : 'Ver detalle'}
             </button>
           )}
-          <button style={s.btnChico} onClick={onCerrar}>✕</button>
+          <button style={s.btnChico} onClick={onCerrar} aria-label="Cerrar resumen"><X size={13} /></button>
         </span>
       </div>
       {verDetalle && (
@@ -238,7 +241,7 @@ function ResultadoCarga({ carga, onCerrar }) {
               <span style={{ ...s.chip, color:RESULTADOS[r.estado]?.color, background:RESULTADOS[r.estado]?.bg }}>
                 {RESULTADOS[r.estado]?.label || r.estado}
               </span>
-              <span style={{ fontFamily:'monospace', fontSize:12 }}>{r.archivo}</span>
+              <span style={{ fontFamily:'var(--pc-mono)', fontSize:12 }}>{r.archivo}</span>
               <span style={{ color:'var(--pc-gris)' }}>{r.mensaje}</span>
             </div>
           ))}
@@ -320,8 +323,8 @@ function ModalVincular({ factura, onClose, onVinculada }) {
                 <span>{money(o.total)}</span>
                 <span>· {etiquetaEstado(o.estado)}</span>
                 <span>· {fechaCorta(o.fecha)}</span>
-                {o.mismo_rfc && <span style={s.okChip}>✓ mismo RFC</span>}
-                {o.total_cuadra && <span style={s.okChip}>✓ total cuadra</span>}
+                {o.mismo_rfc && <span style={s.okChip}><Check size={11} /> mismo RFC</span>}
+                {o.total_cuadra && <span style={s.okChip}><Check size={11} /> total cuadra</span>}
                 {o.ya_facturada && <span style={{ ...s.chip, color:'var(--pc-ambar-texto)', background:'var(--pc-ambar-bg)' }}>ya tiene factura</span>}
               </div>
             </div>
@@ -349,12 +352,14 @@ function ModalVincular({ factura, onClose, onVinculada }) {
 
 const s = {
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end', marginBottom:16, gap:16, flexWrap:'wrap' },
-  h2: { fontSize:22, fontWeight:600, margin:0, color:'var(--pc-tinta)' },
+  h2: { fontSize:24, fontWeight:700, margin:0, color:'var(--pc-tinta)', letterSpacing:'-0.022em' },
   help: { fontSize:13, color:'var(--pc-gris)', marginTop:4, maxWidth:640, lineHeight:1.45 },
   error: { padding:20, background:'var(--pc-rojo-bg)', color:'var(--pc-rojo)', borderRadius:8 },
-  zona: { border:'2px dashed var(--pc-borde)', borderRadius:12, padding:'22px 18px', textAlign:'center',
+  zona: { border:'1.5px dashed var(--pc-borde)', borderRadius:12, padding:'22px 18px', textAlign:'center',
           background:'var(--pc-superficie)', marginBottom:14, transition:'border-color 0.15s, background 0.15s' },
   zonaActiva: { borderColor:C.aqua, background:C.aquaBg },
+  zonaIcono: { width:44, height:44, borderRadius:'50%', display:'grid', placeItems:'center', margin:'0 auto 10px',
+               background:C.aquaBg, color:C.aqua },
   resultado: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:10,
                padding:'12px 14px', marginBottom:14, fontSize:13 },
   resultadoLinea: { display:'flex', gap:10, alignItems:'center', flexWrap:'wrap', padding:'6px 0',
@@ -363,13 +368,13 @@ const s = {
   filtro: { border:'1px solid var(--pc-borde)', background:'var(--pc-superficie)', color:'var(--pc-gris)',
             padding:'7px 13px', borderRadius:20, fontSize:13, fontWeight:500, cursor:'pointer' },
   filtroActivo: { borderColor:C.aqua, background:C.aquaBg, color:C.aqua, fontWeight:600 },
-  card: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:12, overflow:'hidden' },
-  table: { width:'100%', borderCollapse:'collapse', fontSize:13.5 },
+  card: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:12, overflowX:'auto', boxShadow:'var(--pc-sombra-1)' },
+  table: { minWidth:760, width:'100%', borderCollapse:'collapse', fontSize:13.5 },
   th: { textAlign:'left', padding:'11px 14px', background:'var(--pc-superficie-3)', color:'var(--pc-gris-2)',
         fontWeight:600, fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--pc-borde)' },
   td: { padding:'11px 14px', borderBottom:'1px solid var(--pc-linea)', verticalAlign:'top' },
   empty: { textAlign:'center', color:'var(--pc-gris)', padding:28 },
-  rfc: { fontFamily:'monospace', fontSize:11.5, color:'var(--pc-gris-3)' },
+  rfc: { fontFamily:'var(--pc-mono)', fontSize:11.5, color:'var(--pc-gris-3)' },
   chip: { fontSize:11, fontWeight:600, padding:'2px 8px', borderRadius:20, background:'var(--pc-superficie-3)',
           color:'var(--pc-gris-2)', whiteSpace:'nowrap' },
   okChip: { fontSize:11, fontWeight:600, padding:'1px 7px', borderRadius:20, background:'var(--pc-verde-bg)',

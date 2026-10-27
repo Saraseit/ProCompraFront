@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import api from '../../api'
-import { TIPOS_ADJUNTO, etiquetaAdjunto, money, fechaCorta, mensajeError, tamanoArchivo } from '../../constants'
+import { TIPOS_ADJUNTO, esAdmin, etiquetaAdjunto, money, fechaCorta, mensajeError, tamanoArchivo } from '../../constants'
 import { useToast, useConfirm } from '../../ui/feedback-context'
 import { s, bloqueado } from './estilos'
 import BotonArchivo from './BotonArchivo'
@@ -51,7 +51,7 @@ export default function Documentos({ orden, usuario, onCambio }) {
     }
   }
 
-  const puedeQuitar = (adj) => !cerrada && (usuario.rol === 'admin' || adj.subido_por === usuario.id)
+  const puedeQuitar = (adj) => !cerrada && (esAdmin(usuario.rol) || adj.subido_por === usuario.id)
 
   return (
     <>

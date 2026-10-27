@@ -1,4 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
+import {
+  LayoutDashboard, ClipboardList, ShoppingCart, Building2, Receipt, Wallet,
+  BarChart3, Users, LogOut, Menu,
+} from 'lucide-react'
 import { supabase } from './supabaseClient'
 import api from './api'
 import Login from './Login'
@@ -10,16 +14,25 @@ import Proveedores from './pages/Proveedores'
 import Usuarios from './pages/Usuarios'
 import Facturas from './pages/Facturas'
 import Credito from './pages/Credito'
-import { veFacturas } from './constants'
-import { C } from './ui/tema'
+import { veFacturas, etiquetaRol } from './constants'
 import BotonTema from './ui/BotonTema'
+import { PantallaCarga } from './ui/Carga'
+
+const veControl = (rol) => ['admin', 'compras', 'pagos'].includes(rol)
+
+// La pestaña vive en el hash (#ordenes) para que recargar o volver atrás la respete.
+const leerHash = () => decodeURIComponent(window.location.hash.replace(/^#/, '')) || 'inicio'
+
+const iniciales = (nombre = '') =>
+  nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?'
 
 function App() {
   const [session, setSession] = useState(null)
   const [perfil, setPerfil] = useState(null)
   const [cargando, setCargando] = useState(true)
-  const [tab, setTab] = useState('inicio')
+  const [tab, setTab] = useState(leerHash)
   const [filtroOrdenes, setFiltroOrdenes] = useState('')
+  const [menuAbierto, setMenuAbierto] = useState(false)
   const [conteos, setConteos] = useState({ reqs: 0, autorizacion: 0, facturas: 0, credito: 0 })
 
   // El perfil cargado solo cuenta si pertenece a la sesión vigente.
@@ -28,7 +41,16 @@ function App() {
   const irA = (destino, filtro = '') => {
     setFiltroOrdenes(filtro)
     setTab(destino)
+    setMenuAbierto(false)
+    if (leerHash() !== destino) window.history.pushState(null, '', `#${destino}`)
+    window.scrollTo({ top: 0 })
   }
+
+  useEffect(() => {
+    const alCambiar = () => { setFiltroOrdenes(''); setTab(leerHash()) }
+    window.addEventListener('popstate', alCambiar)
+    return () => window.removeEventListener('popstate', alCambiar)
+  }, [])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -71,86 +93,112 @@ function App() {
     if (hayUsuario) refrescarConteos()
   }, [hayUsuario, tab, refrescarConteos])
 
-  if (cargando) return <div style={{ padding: 40 }}>Cargando...</div>
+  if (cargando) return <PantallaCarga />
   if (!session) return <Login />
-  if (!usuario) return <div style={{ padding: 40 }}>Cargando perfil...</div>
+  if (!usuario) return <PantallaCarga texto="Cargando tu perfil..." />
 
-  const pestanas = [
-    ['inicio', 'Inicio'],
-    ['requerimientos', 'Requerimientos', conteos.reqs, 'requerimientos pendientes'],
-    ['ordenes', 'Órdenes de compra', conteos.autorizacion, 'órdenes en autorización'],
-    ['proveedores', 'Proveedores'],
-    ...(veFacturas(usuario.rol) ? [['facturas', 'Facturas', conteos.facturas, 'facturas sin vincular']] : []),
-    ...(veFacturas(usuario.rol) ? [['credito', 'Crédito', conteos.credito, 'órdenes a crédito vencidas']] : []),
-    ...(['admin','compras','pagos'].includes(usuario.rol) ? [['control','Control de gastos']] : []),
-    ...(usuario.rol === 'admin' ? [['usuarios','Usuarios']] : []),
-  ]
+  const rol = usuario.rol
+  const secciones = [
+    [null, [
+      ['inicio', 'Inicio', LayoutDashboard],
+    ]],
+    ['Operación', [
+      ['requerimientos', 'Requerimientos', ClipboardList, conteos.reqs, 'requerimientos pendientes'],
+      ['ordenes', 'Órdenes de compra', ShoppingCart, conteos.autorizacion, 'órdenes en autorización'],
+      ['proveedores', 'Proveedores', Building2],
+    ]],
+    ['Finanzas', [
+      ...(veFacturas(rol) ? [['facturas', 'Facturas', Receipt, conteos.facturas, 'facturas sin vincular']] : []),
+      ...(veFacturas(rol) ? [['credito', 'Crédito', Wallet, conteos.credito, 'órdenes a crédito vencidas']] : []),
+      ...(veControl(rol) ? [['control', 'Control de gastos', BarChart3]] : []),
+    ]],
+    ['Administración', [
+      ...(rol === 'admin' ? [['usuarios', 'Usuarios', Users]] : []),
+    ]],
+  ].filter(([, items]) => items.length)
+
+  const disponibles = secciones.flatMap(([, items]) => items.map(([k]) => k))
+  const actual = disponibles.includes(tab) ? tab : 'inicio'
+  const tituloActual = secciones.flatMap(([, items]) => items).find(([k]) => k === actual)?.[1]
 
   return (
-    <div style={{ minHeight:'100vh', background:C.fondo, fontFamily:"'Inter', system-ui, sans-serif" }}>
-
-      <header style={{ display:'flex', justifyContent:'space-between', alignItems:'center',
-                       padding:'18px 32px', background:'var(--pc-superficie)', borderBottom:`1px solid ${C.borde}` }}>
-        <div>
-          <span style={{ fontSize:22, fontWeight:700, color:C.tinta }}>MINIMAL 4.0</span>
-          <span style={{ fontSize:13, color:C.gris, marginLeft:10 }}>ProCompra</span>
+    <div className="pc-shell" data-menu={menuAbierto ? 'abierto' : 'cerrado'}>
+      <aside className="pc-lateral" aria-label="Navegación principal">
+        <div className="pc-marca">
+          <div className="pc-marca-logo">M4</div>
+          <div>
+            <div className="pc-marca-nombre">ProCompra</div>
+            <div className="pc-marca-sub">MINIMAL 4.0</div>
+          </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:14 }}>
-          <span style={{ fontSize:13, color:C.gris }}>{usuario.nombre} · {usuario.rol}</span>
+
+        <nav className="pc-nav">
+          {secciones.map(([titulo, items]) => (
+            <div key={titulo || 'principal'}>
+              {titulo && <div className="pc-nav-seccion">{titulo}</div>}
+              {items.map(([k, label, Icono, cuenta, descripcion]) => (
+                <button key={k} className="pc-nav-item" onClick={() => irA(k)}
+                  aria-current={actual === k ? 'page' : undefined}>
+                  <Icono size={17} strokeWidth={1.9} />
+                  <span>{label}</span>
+                  {cuenta > 0 && (
+                    <span className="pc-nav-badge" title={`${cuenta} ${descripcion}`}>
+                      {cuenta > 99 ? '99+' : cuenta}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          ))}
+        </nav>
+
+        <div className="pc-usuario">
+          <div className="pc-avatar" aria-hidden>{iniciales(usuario.nombre)}</div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div className="pc-usuario-nombre" title={usuario.nombre}>{usuario.nombre}</div>
+            <div className="pc-usuario-rol">{etiquetaRol(rol)}</div>
+          </div>
           <BotonTema />
-          <button onClick={() => supabase.auth.signOut()}
-            style={{ background:'none', border:`1px solid ${C.borde}`, padding:'7px 14px',
-                     borderRadius:8, fontSize:13, cursor:'pointer' }}>
-            Salir
+          <button className="pc-icono-btn" onClick={() => supabase.auth.signOut()}
+            title="Cerrar sesión" aria-label="Cerrar sesión">
+            <LogOut size={15} />
           </button>
         </div>
-      </header>
+      </aside>
 
-      <nav style={{ display:'flex', gap:4, padding:'0 32px', background:'var(--pc-superficie)',
-                    borderBottom:`1px solid ${C.borde}`, overflowX:'auto' }}>
-        {pestanas.map(([k, label, cuenta, descripcion]) => (
-          <button key={k} onClick={() => irA(k)}
-            style={{ border:'none', background:'none', padding:'14px 16px', fontWeight:500,
-                     fontSize:14, cursor:'pointer', color: tab === k ? C.tinta : C.gris,
-                     borderBottom: tab === k ? `2px solid ${C.acento}` : '2px solid transparent',
-                     marginBottom: -1, display:'flex', alignItems:'center', gap:7, whiteSpace:'nowrap' }}>
-            {label}
-            {cuenta > 0 && (
-              <span title={`${cuenta} ${descripcion}`} style={s.badge}>
-                {cuenta > 99 ? '99+' : cuenta}
-              </span>
-            )}
+      <div className="pc-velo-menu" onClick={() => setMenuAbierto(false)} />
+
+      <div className="pc-principal">
+        <header className="pc-barra-movil">
+          <button className="pc-icono-btn" onClick={() => setMenuAbierto(true)} aria-label="Abrir menú">
+            <Menu size={17} />
           </button>
-        ))}
-      </nav>
+          <span style={{ fontWeight: 650, fontSize: 15 }}>{tituloActual}</span>
+        </header>
 
-      <main style={{ padding:'26px 32px', maxWidth:1180, margin:'0 auto' }}>
-        {tab === 'inicio' && <Inicio usuario={usuario} onIr={irA} />}
-        {tab === 'requerimientos' && (
-          <Requerimientos
-            usuario={usuario}
-            onCambio={refrescarConteos}
-            onOrdenCreada={() => irA('ordenes', 'borrador')}
-          />
-        )}
-        {tab === 'ordenes' && (
-          <Ordenes usuario={usuario} filtroInicial={filtroOrdenes} onCambio={refrescarConteos} />
-        )}
-        {tab === 'proveedores' && <Proveedores usuario={usuario} />}
-        {tab === 'facturas' && veFacturas(usuario.rol) && <Facturas onCambio={refrescarConteos} />}
-        {tab === 'credito' && veFacturas(usuario.rol) && <Credito usuario={usuario} onCambio={refrescarConteos} />}
-        {tab === 'control' && ['admin','compras','pagos'].includes(usuario.rol) && <Control />}
-        {tab === 'usuarios' && usuario.rol === 'admin' && <Usuarios usuario={usuario} />}
-      </main>
-
+        <main className="pc-contenido">
+          <div key={actual} className="pc-pagina">
+            {actual === 'inicio' && <Inicio usuario={usuario} onIr={irA} />}
+            {actual === 'requerimientos' && (
+              <Requerimientos
+                usuario={usuario}
+                onCambio={refrescarConteos}
+                onOrdenCreada={() => irA('ordenes', 'borrador')}
+              />
+            )}
+            {actual === 'ordenes' && (
+              <Ordenes usuario={usuario} filtroInicial={filtroOrdenes} onCambio={refrescarConteos} />
+            )}
+            {actual === 'proveedores' && <Proveedores usuario={usuario} />}
+            {actual === 'facturas' && <Facturas onCambio={refrescarConteos} />}
+            {actual === 'credito' && <Credito usuario={usuario} onCambio={refrescarConteos} />}
+            {actual === 'control' && <Control />}
+            {actual === 'usuarios' && <Usuarios usuario={usuario} />}
+          </div>
+        </main>
+      </div>
     </div>
   )
-}
-
-const s = {
-  badge: { minWidth:20, height:20, padding:'0 6px', borderRadius:10, boxSizing:'border-box',
-           background:'var(--pc-aqua-solido)', color:'#fff', fontSize:11, fontWeight:700,
-           display:'inline-flex', alignItems:'center', justifyContent:'center' },
 }
 
 export default App

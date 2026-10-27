@@ -124,7 +124,7 @@ export function PanelPago({ orden, ejecutar, procesando, toast }) {
             {metodo === 'transferencia' && (
               <BotonArchivo accept={ACEPTA_DOCUMENTOS} style={s.btnChico}
                 onArchivos={([a]) => setComprobante(a)}>
-                {comprobante ? `📎 ${comprobante.name}` : '+ Comprobante (opcional)'}
+                {comprobante ? `Comprobante: ${comprobante.name}` : '+ Comprobante (opcional)'}
               </BotonArchivo>
             )}
             {faltante && <span style={{ fontSize:12, color:'var(--pc-gris)' }}>{faltante}</span>}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import api from '../api'
 import { money, METODOS_PAGO, etiquetaMetodo, etiquetaEstado, mensajeError } from '../constants'
 import { useToast } from '../ui/feedback-context'
+import { CargaTabla } from '../ui/Carga'
 
 const FILTROS_VACIOS = { desde: '', hasta: '', proveedor_id: '', tipo_pago: '' }
 
@@ -143,7 +144,7 @@ export default function Control() {
         </button>
       </div>
 
-      {cargando && <div style={s.msg}>Cargando...</div>}
+      {cargando && <CargaTabla filas={5} columnas={6} />}
 
       {/* KPIs */}
       <div style={s.kpis}>
@@ -198,7 +199,7 @@ export default function Control() {
             )}
             {ordenes.map((o) => (
               <tr key={o.id}>
-                <td style={{...s.td, fontFamily:'monospace'}}>#{o.folio}</td>
+                <td style={{...s.td, fontFamily:'var(--pc-mono)'}}>#{o.folio}</td>
                 <td style={s.td}>{o.proveedor?.nombre || '—'}</td>
                 <td style={s.td}>{etiquetaMetodo(o.tipo_pago)}</td>
                 <td style={s.td}>{etiquetaEstado(o.estado)}</td>
@@ -226,7 +227,7 @@ export default function Control() {
 }
 
 const s = {
-  h2: { fontSize:22, fontWeight:600, margin:0, color:'var(--pc-tinta)' },
+  h2: { fontSize:24, fontWeight:700, margin:0, color:'var(--pc-tinta)', letterSpacing:'-0.022em' },
   help: { fontSize:13, color:'var(--pc-gris)', marginTop:4 },
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
             marginBottom:14, gap:16, flexWrap:'wrap' },
@@ -243,10 +244,10 @@ const s = {
   error: { padding:20, background:'var(--pc-rojo-bg)', color:'var(--pc-rojo)', borderRadius:8 },
   empty: { textAlign:'center', color:'var(--pc-gris-3)', padding:26 },
   kpis: { display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:14 },
-  kpi: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:12, padding:20 },
+  kpi: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:12, padding:20, boxShadow:'var(--pc-sombra-1)' },
   kpiV: { fontSize:26, fontWeight:700, color:'var(--pc-tinta)' },
   kpiL: { fontSize:12, color:'var(--pc-gris)', marginTop:4 },
-  box: { border:'1px solid var(--pc-borde)', borderRadius:12, padding:16, background:'var(--pc-superficie)' },
+  box: { border:'1px solid var(--pc-borde)', borderRadius:12, padding:16, background:'var(--pc-superficie)', boxShadow:'var(--pc-sombra-1)' },
   boxTitle: { fontSize:11, textTransform:'uppercase', letterSpacing:'0.06em',
               color:'var(--pc-gris)', fontWeight:600, marginBottom:14 },
   barRow: { display:'flex', alignItems:'center', gap:12, padding:'6px 0' },
@@ -254,7 +255,7 @@ const s = {
               textOverflow:'ellipsis', whiteSpace:'nowrap' },
   barTrack: { flex:1, height:10, background:'var(--pc-neutro-bg)', borderRadius:6, overflow:'hidden' },
   barFill: { height:'100%', background:'var(--pc-acento)', borderRadius:6, transition:'width 0.3s' },
-  barVal: { width:120, textAlign:'right', fontSize:13, fontWeight:600, fontFamily:'monospace' },
+  barVal: { width:120, textAlign:'right', fontSize:13, fontWeight:600, fontFamily:'var(--pc-mono)' },
   table: { width:'100%', borderCollapse:'collapse', fontSize:13 },
   th: { textAlign:'left', padding:'10px 8px', background:'var(--pc-superficie-3)', color:'var(--pc-gris-2)',
         fontWeight:600, fontSize:11, textTransform:'uppercase' },

@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react'
+import { Plus, Pencil, Search, Building2 } from 'lucide-react'
 import api from '../api'
-import { mensajeError, PROVEEDOR_VACIO, esOperacion } from '../constants'
+import { mensajeError, PROVEEDOR_VACIO, esAdmin, esOperacion } from '../constants'
 import Modal, { ModalHead, Label } from '../ui/Modal'
 import { useToast, useConfirm } from '../ui/feedback-context'
+import { FilasCarga } from '../ui/Carga'
+import Vacio from '../ui/Vacio'
 
 export default function Proveedores({ usuario }) {
   const [proveedores, setProveedores] = useState([])
@@ -14,7 +17,7 @@ export default function Proveedores({ usuario }) {
   const confirmar = useConfirm()
 
   const puedeEditar = esOperacion(usuario.rol)
-  const puedeEliminar = usuario.rol === 'admin'
+  const puedeEliminar = esAdmin(usuario.rol)
 
   useEffect(() => {
     const timer = setTimeout(() => cargarProveedores(), 300)
@@ -73,7 +76,7 @@ export default function Proveedores({ usuario }) {
           />
           {puedeEditar && (
             <button style={s.btnPrimary} onClick={() => setForm({ ...PROVEEDOR_VACIO })}>
-              + Nuevo proveedor
+              <Plus size={16} /> Nuevo proveedor
             </button>
           )}
         </div>
@@ -94,28 +97,26 @@ export default function Proveedores({ usuario }) {
           </thead>
           <tbody>
             {cargando && (
-              <tr><td colSpan={7} style={s.empty}>Cargando...</td></tr>
+              <FilasCarga columnas={7} />
             )}
             {!cargando && filtrados.length === 0 && (
               <tr><td colSpan={7} style={s.empty}>
-                {busqueda ? 'Sin resultados para esa búsqueda.' : (
-                  <>
-                    Aún no hay proveedores activos.
-                    {puedeEditar && (
-                      <div style={{ marginTop: 12 }}>
-                        <button style={s.btnPrimary} onClick={() => setForm({ ...PROVEEDOR_VACIO })}>
-                          + Agregar el primero
-                        </button>
-                      </div>
-                    )}
-                  </>
+                {busqueda ? (
+                  <Vacio icono={Search} titulo="Sin resultados" compacto>Ningún proveedor coincide con “{busqueda}”.</Vacio>
+                ) : (
+                  <Vacio icono={Building2} titulo="Aún no hay proveedores activos" compacto
+                    accion={puedeEditar && (
+                      <button style={s.btnPrimary} onClick={() => setForm({ ...PROVEEDOR_VACIO })}>
+                        <Plus size={16} /> Agregar el primero
+                      </button>
+                    )} />
                 )}
               </td></tr>
             )}
             {filtrados.map((p) => (
               <tr key={p.id}>
                 <td style={{ ...s.td, fontWeight: 500 }}>{p.nombre}</td>
-                <td style={{ ...s.td, fontFamily: 'monospace', fontSize: 12 }}>{p.rfc || '—'}</td>
+                <td style={{ ...s.td, fontFamily: 'var(--pc-mono)', fontSize: 12 }}>{p.rfc || '—'}</td>
                 <td style={s.td}>{p.correo || '—'}</td>
                 <td style={s.td}>{p.telefono || '—'}</td>
                 <td style={s.td}>{p.cuenta_bancaria || '—'}</td>
@@ -126,7 +127,7 @@ export default function Proveedores({ usuario }) {
                   <td style={s.td}>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button style={s.btnGhost} onClick={() => setForm({ ...p })}>
-                        Editar
+                        <Pencil size={12} /> Editar
                       </button>
                       {puedeEliminar && (
                         <button style={s.btnDanger} onClick={() => desactivarProveedor(p.id, p.nombre)}>
@@ -253,12 +254,12 @@ function Field({ label, requerido, children }) {
 
 const s = {
   header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16, gap: 16, flexWrap: 'wrap' },
-  h2: { fontSize: 22, fontWeight: 600, margin: 0, color: 'var(--pc-tinta)' },
+  h2: { fontSize: 24, fontWeight: 700, margin: 0, color: 'var(--pc-tinta)', letterSpacing: '-0.022em' },
   help: { fontSize: 13, color: 'var(--pc-gris)', marginTop: 4 },
   error: { padding: 20, background: 'var(--pc-rojo-bg)', color: 'var(--pc-rojo)', borderRadius: 8 },
   empty: { textAlign: 'center', color: 'var(--pc-gris-3)', padding: 26 },
-  card: { background: 'var(--pc-superficie)', border: '1px solid var(--pc-borde)', borderRadius: 12, overflow: 'hidden' },
-  table: { width: '100%', borderCollapse: 'collapse', fontSize: 13.5 },
+  card: { background: 'var(--pc-superficie)', border: '1px solid var(--pc-borde)', borderRadius: 12, overflowX: 'auto', boxShadow: 'var(--pc-sombra-1)' },
+  table: { minWidth:820, width: '100%', borderCollapse: 'collapse', fontSize: 13.5 },
   th: { textAlign: 'left', padding: '11px 14px', background: 'var(--pc-superficie-3)', color: 'var(--pc-gris-2)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', borderBottom: '1px solid var(--pc-borde)' },
   td: { padding: '11px 14px', borderBottom: '1px solid var(--pc-linea)' },
   input: { width: '100%', border: '1px solid var(--pc-borde)', borderRadius: 8, padding: '9px 11px', fontSize: 14, boxSizing: 'border-box' },

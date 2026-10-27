@@ -1,10 +1,13 @@
 import { useState, useEffect, useMemo } from 'react'
+import { Plus, Pencil, ClipboardCheck, Sparkles } from 'lucide-react'
 import api from '../api'
 import { money, mensajeError, fechaCorta, hoy, isoLocal, PROVEEDOR_VACIO, esOperacion } from '../constants'
 import Modal, { ModalHead, Label } from '../ui/Modal'
 import { useToast } from '../ui/feedback-context'
 import { C } from '../ui/tema'
 import { ModalProveedor } from './Proveedores'
+import { CargaTabla } from '../ui/Carga'
+import Vacio from '../ui/Vacio'
 
 const UNIDADES = ["PZA","CAJA","LITRO","KILO","CUBETA","BOTE","CORTE","GALON","MTR","ROLLO","SERVICIO","PAQUETE"]
 
@@ -168,7 +171,7 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
   const grupoSinProveedor = grupos.find((g) => g.provId === '__sin_proveedor__')
   const puedeGenerar = nSel > 0 && !grupoSinProveedor && !generando
 
-  if (cargando) return <div style={s.msg}>Cargando requerimientos...</div>
+  if (cargando) return <CargaTabla filas={7} columnas={7} />
   if (error) return <div style={s.error}>{error}</div>
 
   return (
@@ -183,7 +186,7 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
         </div>
         <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
           <button style={s.btnGhostLg} onClick={abrirNuevo}>
-            + Nuevo requerimiento
+            <Plus size={16} /> Nuevo requerimiento
           </button>
           {puedeEditar && <button
             style={{ ...s.btnPrimary,
@@ -198,7 +201,7 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
             onClick={generarOrdenes}>
             {generando
               ? 'Generando...'
-              : `Generar órdenes de compra${nSel > 0 ? ` (${nSel})` : ''}`}
+              : <><Sparkles size={15} /> Generar órdenes de compra{nSel > 0 ? ` (${nSel})` : ''}</>}
           </button>}
         </div>
       </div>
@@ -265,11 +268,10 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
           <tbody>
             {requerimientos.length === 0 && (
               <tr><td colSpan={puedeEditar ? 9 : 8} style={s.empty}>
-                <div style={s.emptyTitulo}>Todo listo.</div>
-                <div>Agrega un requerimiento para empezar.</div>
-                <button style={{ ...s.btnPrimary, marginTop:14 }} onClick={abrirNuevo}>
-                  + Nuevo requerimiento
-                </button>
+                <Vacio icono={ClipboardCheck} titulo="Todo listo" compacto
+                  accion={<button style={s.btnPrimary} onClick={abrirNuevo}><Plus size={16} /> Nuevo requerimiento</button>}>
+                  No hay requerimientos pendientes. Agrega uno para empezar.
+                </Vacio>
               </td></tr>
             )}
             {requerimientos.map((r) => (
@@ -284,14 +286,14 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
                 </td>
                 <td style={{...s.td, textAlign:'right'}}>{r.cantidad}</td>
                 <td style={s.td}>{r.unidad}</td>
-                <td style={{...s.td, fontFamily:'monospace', fontSize:12}}>{r.contrato || '—'}</td>
+                <td style={{...s.td, fontFamily:'var(--pc-mono)', fontSize:12}}>{r.contrato || '—'}</td>
                 <td style={s.td}>{r.proveedor?.nombre || '—'}</td>
                 <td style={{...s.td, textAlign:'right'}}>{money(r.precio_estimado)}</td>
                 {puedeEditar && (
                   <td style={s.td}>
                     <button style={s.btnGhost}
                       onClick={() => setEditando({ ...r, proveedor_sug: r.proveedor_sug || '' })}>
-                      Editar
+                      <Pencil size={12} /> Editar
                     </button>
                   </td>
                 )}
@@ -443,7 +445,7 @@ function VistaSemana({ requerimientos, sel, toggle, seleccionar, onEditar, onNue
         <div style={{ ...s.empty, ...s.vacioSemana }}>
           <div style={s.emptyTitulo}>Todo listo.</div>
           <div>No hay requerimientos pendientes.</div>
-          <button style={{ ...s.btnPrimary, marginTop:14 }} onClick={onNuevo}>+ Nuevo requerimiento</button>
+          <button style={{ ...s.btnPrimary, marginTop:14 }} onClick={onNuevo}><Plus size={16} /> Nuevo requerimiento</button>
         </div>
       )}
     </div>
@@ -618,7 +620,7 @@ function ComboProveedor({ proveedores, valor, onChange, onAgregar }) {
                 setAbierto(false)
                 onAgregar(texto.trim())
               }}>
-              + Agregar nuevo proveedor{texto.trim() ? ` "${texto.trim()}"` : ''}
+              <Plus size={15} /> Agregar nuevo proveedor{texto.trim() ? ` "${texto.trim()}"` : ''}
             </div>
           )}
         </div>
@@ -630,10 +632,10 @@ function ComboProveedor({ proveedores, valor, onChange, onAgregar }) {
 const s = {
   header: { display:'flex', justifyContent:'space-between', alignItems:'flex-end',
             marginBottom:16, gap:16, flexWrap:'wrap' },
-  h2: { fontSize:22, fontWeight:600, margin:0, color:'var(--pc-tinta)' },
+  h2: { fontSize:24, fontWeight:700, margin:0, color:'var(--pc-tinta)', letterSpacing:'-0.022em' },
   help: { fontSize:13, color:'var(--pc-gris)', marginTop:4 },
-  card: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:12, overflow:'hidden' },
-  table: { width:'100%', borderCollapse:'collapse', fontSize:14 },
+  card: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', borderRadius:12, overflowX:'auto', boxShadow:'var(--pc-sombra-1)' },
+  table: { minWidth:860, width:'100%', borderCollapse:'collapse', fontSize:14 },
   th: { textAlign:'left', padding:'11px 14px', background:'var(--pc-superficie-3)', color:'var(--pc-gris-2)',
         fontWeight:600, fontSize:11, textTransform:'uppercase', borderBottom:'1px solid var(--pc-borde)' },
   td: { padding:'11px 14px', borderBottom:'1px solid var(--pc-linea)' },
@@ -688,7 +690,7 @@ const s = {
   reqCardSel: { background:'var(--pc-acento-bg)', borderColor:'var(--pc-acento-borde)' },
   reqDesc: { fontSize:12.5, fontWeight:600, color:'var(--pc-tinta)', lineHeight:1.3, overflowWrap:'anywhere' },
   reqMeta: { fontSize:11.5, color:'var(--pc-gris)', marginTop:2 },
-  reqContrato: { fontSize:10.5, fontFamily:'monospace', color:'var(--pc-gris-3)', marginTop:2 },
+  reqContrato: { fontSize:10.5, fontFamily:'var(--pc-mono)', color:'var(--pc-gris-3)', marginTop:2 },
   franjaAtrasados: { background:'var(--pc-rojo-bg)', border:'1px solid var(--pc-rojo-borde)', borderRadius:10,
                      padding:'10px 12px', marginBottom:10 },
   franjaSinFecha: { background:'var(--pc-superficie)', border:'1px dashed var(--pc-borde)', borderRadius:10,
@@ -709,9 +711,9 @@ const s = {
   comboItem: { display:'flex', justifyContent:'space-between', alignItems:'center', gap:10,
                padding:'8px 11px', fontSize:13.5, cursor:'pointer',
                borderBottom:'1px solid var(--pc-linea)' },
-  comboRfc: { fontFamily:'monospace', fontSize:11, color:'var(--pc-gris-3)', whiteSpace:'nowrap' },
+  comboRfc: { fontFamily:'var(--pc-mono)', fontSize:11, color:'var(--pc-gris-3)', whiteSpace:'nowrap' },
   comboMas: { padding:'8px 11px', fontSize:12, color:'var(--pc-gris-3)', background:'var(--pc-superficie-2)' },
-  comboNuevo: { position:'sticky', bottom:0, padding:'9px 11px', fontSize:13.5, fontWeight:600,
+  comboNuevo: { position:'sticky', bottom:0, padding:'9px 11px', fontSize:13.5, fontWeight:600, display:'flex', alignItems:'center', gap:6,
                 cursor:'pointer', color:C.aqua, background:C.aquaBg,
                 borderTop:`1px solid ${C.aqua}` },
 }
