@@ -103,3 +103,11 @@ export const tamanoArchivo = (bytes) => {
 // 6 p. m. en México ya devuelve el día siguiente.
 export const isoLocal = (d) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+
+export const UNIDADES = ['PZA', 'CAJA', 'LITRO', 'KILO', 'CUBETA', 'BOTE', 'CORTE', 'GALON', 'MTR', 'ROLLO', 'SERVICIO', 'PAQUETE']
+
+// Mismo cálculo que el backend (app/utils/ajustes.py): IVA 16% sobre el subtotal.
+export const totalConIva = (partidas) => {
+  const subtotal = partidas.reduce((s, p) => s + (Number(p.cantidad) || 0) * (Number(p.precio_unitario) || 0), 0)
+  return Math.round(subtotal * 1.16 * 100) / 100
+}

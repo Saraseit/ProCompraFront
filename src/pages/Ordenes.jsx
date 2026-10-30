@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, X, Paperclip, ShoppingCart, SearchX, Filter } from 'lucide-react'
+import { Search, X, Paperclip, ShoppingCart, SearchX, Filter, Link2 } from 'lucide-react'
 import api from '../api'
 import { ESTADOS, money, fechaCorta, mensajeError } from '../constants'
 import { useToast } from '../ui/feedback-context'
@@ -9,7 +9,7 @@ import { C } from '../ui/tema'
 import ModalOrden, { Badge } from './orden/ModalOrden'
 import { descargarPdfOrden } from './orden/archivos'
 
-export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
+export default function Ordenes({ usuario, filtroInicial = '', onCambio, abrirOrdenId, onAbierta }) {
   const [ordenes, setOrdenes] = useState([])
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
@@ -48,6 +48,17 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
     }
   }
 
+  // Una orden pedida desde fuera (un aviso de la campana) se abre al llegar.
+  useEffect(() => {
+    if (!abrirOrdenId) return
+    const timer = setTimeout(() => {
+      abrirOrden({ id: abrirOrdenId })
+      if (onAbierta) onAbierta()
+    }, 0)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abrirOrdenId])
+
   async function refrescarOrden(ordenId) {
     const res = await api.get(`/ordenes/${ordenId}`)
     setOrdenAbierta(res.data)
@@ -63,6 +74,7 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
     }
   }
 
+  const folioDe = (id) => ordenes.find((x) => x.id === id)?.folio
   const termino = busqueda.trim().toLowerCase()
   const visibles = termino
     ? ordenes.filter((o) =>
@@ -135,6 +147,11 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
                 <span title="Documentos adjuntos" style={s.clip}><Paperclip size={12} />{o.adjuntos[0].count}</span>
               )}
             </div>
+            {o.orden_origen_id && (
+              <span style={s.complemento}>
+                <Link2 size={12} /> Complemento{folioDe(o.orden_origen_id) ? ` de #${folioDe(o.orden_origen_id)}` : ''}
+              </span>
+            )}
             {o.estado === 'borrador' && o.motivo_devolucion && (
               <span style={s.devuelta}>Devuelta por contabilidad</span>
             )}
@@ -165,6 +182,7 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio }) {
           onClose={() => setOrdenAbierta(null)}
           onCambio={() => refrescarOrden(ordenAbierta.id)}
           onDescargarPdf={descargarPdf}
+          onAbrirOrden={(id) => abrirOrden({ id })}
         />
       )}
     </div>
@@ -205,6 +223,8 @@ const s = {
   clip: { display:'inline-flex', alignItems:'center', gap:3, color:'var(--pc-gris-2)' },
   total: { fontSize:18, fontWeight:700, marginTop:4 },
   btnGhost: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', color:'var(--pc-tinta)' },
+  complemento: { alignSelf:'flex-start', display:'inline-flex', alignItems:'center', gap:4, fontSize:11, fontWeight:600,
+                 color:C.aqua, background:C.aquaBg, padding:'2px 8px', borderRadius:20 },
   devuelta: { alignSelf:'flex-start', fontSize:11, fontWeight:600, color:'var(--pc-ambar-texto)',
               background:'var(--pc-ambar-bg)', padding:'2px 8px', borderRadius:20 },
 }

@@ -56,6 +56,34 @@ export const s = {
              borderRadius:6, background:'var(--pc-superficie-3)', color:'var(--pc-gris-2)', whiteSpace:'nowrap' },
   docNombre: { flex:1, minWidth:0, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', color:'var(--pc-tinta)' },
   docMeta: { fontSize:11.5, color:'var(--pc-gris-3)', whiteSpace:'nowrap' },
+
+  // Edición y surtido parcial
+  tdForm: { padding:'8px 6px', borderBottom:'1px solid var(--pc-linea)', verticalAlign:'top' },
+  inputTabla: { width:'100%', border:'1px solid var(--pc-borde)', borderRadius:7, padding:'7px 9px', fontSize:13,
+                boxSizing:'border-box', font:'inherit' },
+  btnIcono: { border:'none', background:'transparent', width:32, height:32, borderRadius:8, cursor:'pointer',
+              color:'var(--pc-gris)', display:'inline-grid', placeItems:'center' },
+  totalesEdicion: { display:'flex', justifyContent:'space-between', alignItems:'baseline', gap:12, flexWrap:'wrap',
+                    padding:'12px 14px', borderRadius:10, background:'var(--pc-superficie-2)', border:'1px solid var(--pc-borde)' },
+  atajo: { border:'1px solid var(--pc-borde)', background:'var(--pc-superficie)', borderRadius:6, padding:'2px 8px',
+           fontSize:11.5, fontWeight:500, cursor:'pointer', color:'var(--pc-gris-2)' },
+  barraSurtido: { height:4, borderRadius:2, background:'var(--pc-superficie-3)', marginTop:7, overflow:'hidden' },
+  barraSurtidoLlena: { height:'100%', background:C.aqua, borderRadius:2, transition:'width 0.2s' },
+  resumenSurtido: { display:'flex', alignItems:'center', gap:18, flexWrap:'wrap', padding:'14px 16px', borderRadius:10,
+                    background:C.aquaBg, border:`1px solid ${C.aqua}` },
+  resumenEtiqueta: { fontSize:12, color:'var(--pc-gris-2)', fontWeight:500 },
+  resumenMonto: { fontSize:18, fontWeight:700, color:'var(--pc-tinta)' },
+
+  // Órdenes ligadas y reparto del surtido
+  vinculos: { display:'flex', flexDirection:'column', gap:8, padding:'12px 14px', borderRadius:10,
+              background:C.aquaBg, border:`1px solid ${C.aqua}`, fontSize:13 },
+  vinculo: { border:'none', background:'none', padding:0, font:'inherit', fontWeight:600, color:C.aqua,
+             cursor:'pointer', textDecoration:'underline', textUnderlineOffset:2 },
+  reparto: { display:'flex', height:5, borderRadius:3, overflow:'hidden', background:'var(--pc-rojo-bg)', marginTop:6, maxWidth:260 },
+  repartoTexto: { fontSize:11.5, color:'var(--pc-gris)', marginTop:4, lineHeight:1.4 },
+  modificada: { display:'flex', alignItems:'center', gap:8, fontSize:12.5, color:'var(--pc-ambar-texto)',
+                background:'var(--pc-ambar-bg)', border:'1px solid var(--pc-ambar-borde)', padding:'8px 12px', borderRadius:8 },
+  accionesPartidas: { display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap' },
 }
 
 // Botón bloqueado mientras hay una petición en curso.

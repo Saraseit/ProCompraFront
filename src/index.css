@@ -329,3 +329,13 @@ tbody tr:hover > td { background-color: var(--pc-hover); }
   .pc-kpis .pc-kpi { padding: 14px !important; }
   .pc-kpis .pc-kpi-valor { font-size: 20px !important; }
 }
+
+/* Panel de avisos (campana). */
+.pc-campana-panel {
+  position: fixed; z-index: 81; top: 14px; left: 262px; width: 400px; max-height: min(620px, calc(100vh - 28px));
+  display: flex; flex-direction: column; overflow: hidden;
+  background: var(--pc-superficie); border: 1px solid var(--pc-borde); border-radius: 14px; box-shadow: var(--pc-sombra-3);
+}
+@media (max-width: 900px) {
+  .pc-campana-panel { top: 60px; left: 12px; right: 12px; width: auto; max-height: calc(100vh - 76px); }
+}

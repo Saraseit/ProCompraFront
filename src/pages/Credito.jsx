@@ -238,6 +238,7 @@ export default function Credito({ usuario, onCambio }) {
           onClose={() => setOrdenAbierta(null)}
           onCambio={() => refrescarOrden(ordenAbierta.id)}
           onDescargarPdf={descargarPdf}
+          onAbrirOrden={abrirOrden}
         />
       )}
     </div>

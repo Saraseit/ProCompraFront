@@ -17,6 +17,8 @@ import Credito from './pages/Credito'
 import { veFacturas, etiquetaRol } from './constants'
 import BotonTema from './ui/BotonTema'
 import { PantallaCarga } from './ui/Carga'
+import Campana from './ui/Campana'
+import { useAvisos } from './ui/avisos'
 
 const veControl = (rol) => ['admin', 'compras', 'pagos'].includes(rol)
 
@@ -33,13 +35,15 @@ function App() {
   const [tab, setTab] = useState(leerHash)
   const [filtroOrdenes, setFiltroOrdenes] = useState('')
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const [ordenAAbrir, setOrdenAAbrir] = useState(null)
   const [conteos, setConteos] = useState({ reqs: 0, autorizacion: 0, facturas: 0, credito: 0 })
 
   // El perfil cargado solo cuenta si pertenece a la sesión vigente.
   const usuario = session && perfil?.id === session.user.id ? perfil : null
 
-  const irA = (destino, filtro = '') => {
+  const irA = (destino, filtro = '', ordenId = null) => {
     setFiltroOrdenes(filtro)
+    setOrdenAAbrir(ordenId)
     setTab(destino)
     setMenuAbierto(false)
     if (leerHash() !== destino) window.history.pushState(null, '', `#${destino}`)
@@ -93,6 +97,9 @@ function App() {
     if (hayUsuario) refrescarConteos()
   }, [hayUsuario, tab, refrescarConteos])
 
+  const avisos = useAvisos(hayUsuario, tab)
+  const abrirDesdeAviso = (ordenId) => irA('ordenes', '', ordenId)
+
   if (cargando) return <PantallaCarga />
   if (!session) return <Login />
   if (!usuario) return <PantallaCarga texto="Cargando tu perfil..." />
@@ -130,6 +137,7 @@ function App() {
             <div className="pc-marca-nombre">ProCompra</div>
             <div className="pc-marca-sub">MINIMAL 4.0</div>
           </div>
+          <Campana avisos={avisos} onAbrirOrden={abrirDesdeAviso} />
         </div>
 
         <nav className="pc-nav">
@@ -174,6 +182,7 @@ function App() {
             <Menu size={17} />
           </button>
           <span style={{ fontWeight: 650, fontSize: 15 }}>{tituloActual}</span>
+          <Campana avisos={avisos} onAbrirOrden={abrirDesdeAviso} />
         </header>
 
         <main className="pc-contenido">
@@ -187,7 +196,8 @@ function App() {
               />
             )}
             {actual === 'ordenes' && (
-              <Ordenes usuario={usuario} filtroInicial={filtroOrdenes} onCambio={refrescarConteos} />
+              <Ordenes usuario={usuario} filtroInicial={filtroOrdenes} onCambio={refrescarConteos}
+                abrirOrdenId={ordenAAbrir} onAbierta={() => setOrdenAAbrir(null)} />
             )}
             {actual === 'proveedores' && <Proveedores usuario={usuario} />}
             {actual === 'facturas' && <Facturas onCambio={refrescarConteos} />}
