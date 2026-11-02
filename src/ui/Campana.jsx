@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Bell, BellOff, CheckCheck, PackageOpen, Pencil, X } from 'lucide-react'
+import { Bell, BellOff, CheckCheck, PackageOpen, Pencil, TrendingUp, X } from 'lucide-react'
 import { haceCuanto } from './avisos'
 import { C } from './tema'
 
-const ICONOS = { surtido: PackageOpen, modificacion: Pencil }
+const ICONOS = { surtido: PackageOpen, modificacion: Pencil, precio: TrendingUp }
 
 // Campana con los avisos del usuario (cambios a órdenes en curso, surtidos parciales).
 export default function Campana({ avisos, onAbrirOrden }) {
@@ -53,7 +53,7 @@ export default function Campana({ avisos, onAbrirOrden }) {
               <div style={s.vacio}>
                 <BellOff size={22} style={{ color: 'var(--pc-gris-3)' }} />
                 <div>Sin avisos por ahora.</div>
-                <div style={{ fontSize: 12 }}>Aquí verás cuando alguien edite una orden en curso o registre un surtido parcial.</div>
+                <div style={{ fontSize: 12 }}>Aquí verás cuando alguien edite una orden en curso, registre un surtido parcial o un precio se salga de lo normal.</div>
               </div>
             )}
             {avisos.avisos.map((a) => {

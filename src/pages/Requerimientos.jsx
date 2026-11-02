@@ -9,6 +9,8 @@ import { ModalProveedor } from './Proveedores'
 import ComboProveedor from '../ui/ComboProveedor'
 import { CargaTabla } from '../ui/Carga'
 import Vacio from '../ui/Vacio'
+import { AvisoPrecio } from '../ui/precios'
+import { useEvaluacion } from '../ui/evaluacion'
 
 
 const REQ_VACIO = {
@@ -466,6 +468,7 @@ function ModalReq({ data, setData, proveedores, puedeCrearProveedor, onProveedor
   if (!(cantidad > 0)) errores.push('La cantidad debe ser mayor que cero.')
   if (!(precio >= 0)) errores.push('El precio estimado no puede ser negativo.')
   const puedeGuardar = errores.length === 0 && !guardando
+  const [evaluacion] = useEvaluacion([{ descripcion, unidad: data.unidad, precio: precio || null }]) || []
 
   async function guardar() {
     if (!puedeGuardar) return
@@ -510,6 +513,8 @@ function ModalReq({ data, setData, proveedores, puedeCrearProveedor, onProveedor
               onChange={(e) => set('precio_estimado', +e.target.value)} />
           </div>
         </div>
+
+        <AvisoPrecio resultado={evaluacion} />
 
         <Label style={s.labelGap}>Proveedor sugerido</Label>
         <ComboProveedor

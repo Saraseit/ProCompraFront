@@ -17,6 +17,8 @@ import { ACEPTA_DOCUMENTOS, abrirEnPestana, subirAdjunto } from './archivos'
 import { PanelPago, PanelLogistica, PanelComprobacion, ResumenDinero } from './Paneles'
 import EditarOrden from './EditarOrden'
 import Surtido from './Surtido'
+import { ChipPrecio } from '../../ui/precios'
+import { useEvaluacion } from '../../ui/evaluacion'
 
 const ESTADOS_SURTIDO = ['borrador', 'autorizacion', 'autorizada', 'pagada', 'recoleccion', 'comprobacion']
 const EVENTOS_CAMBIO = ['Orden modificada', 'Surtido parcial']
@@ -79,6 +81,11 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
   const ultimoCambio = e !== 'borrador' && (orden.historial || []).find((h) => EVENTOS_CAMBIO.includes(h.evento))
   const puedeEditar = op && e !== 'rechazada'
   const puedeSurtir = op && ESTADOS_SURTIDO.includes(e)
+  // Precio de cada partida contra su histórico (no aplica a una orden cancelada).
+  const evaluacion = useEvaluacion(
+    (orden.partidas || []).map((p) => ({ descripcion: p.concepto, unidad: p.unidad, precio: Number(p.precio_unitario) || null })),
+    op && e !== 'rechazada' && (orden.partidas || []).length > 0,
+  )
 
   // Una acción a la vez; al terminar se recarga la orden y la lista.
   const ejecutar = async (clave, accion) => {
@@ -248,12 +255,13 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
                 </tr>
               </thead>
               <tbody>
-                {orden.partidas?.map((p) => (
+                {orden.partidas?.map((p, i) => (
                   <tr key={p.id}>
                     <td style={s.td}>{p.cantidad}</td>
                     <td style={s.td}>{p.unidad}</td>
                     <td style={s.td}>
                       {p.concepto}
+                      <ChipPrecio resultado={evaluacion?.[i]} />
                       {p.surtido && <RepartoSurtido surtido={p.surtido} onAbrirOrden={onAbrirOrden} />}
                     </td>
                     <td style={{...s.td, fontFamily:'var(--pc-mono)', fontSize:12}}>{p.contrato || '—'}</td>

@@ -35,6 +35,9 @@
   --pc-aqua: #1E9E94;
   --pc-aqua-solido: #1E9E94;
   --pc-aqua-bg: #DDF3F0;
+  /* Series de la gráfica de precios (validadas contra daltonismo en ambos modos). */
+  --pc-serie-facturado: #1E9E94;
+  --pc-serie-cotizado: #B4791F;
 
   --pc-e-borrador: #8A8577;     --pc-e-borrador-bg: #EEEBE3;
   --pc-e-autorizacion: #B4791F; --pc-e-autorizacion-bg: #FBF0DA;
@@ -82,6 +85,8 @@
   --pc-aqua: #3CC4B8;
   --pc-aqua-solido: #178077;
   --pc-aqua-bg: #12302D;
+  --pc-serie-facturado: #26A196;
+  --pc-serie-cotizado: #BA8329;
 
   --pc-e-borrador: #A29D8F;     --pc-e-borrador-bg: #2C2A22;
   --pc-e-autorizacion: #E0A84A; --pc-e-autorizacion-bg: #33290F;

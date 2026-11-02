@@ -77,6 +77,19 @@ export const mensajeError = (e) => {
   return e?.message || 'Error desconocido'
 }
 
+// Precio unitario: hasta 4 decimales cuando hacen falta (tornillos, centímetros).
+export const precioUnitario = (n) =>
+  (Number(n) || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: Math.abs(n) < 10 ? 4 : 2 })
+
+export const porcentaje = (d) => {
+  if (d === null || d === undefined) return ''
+  const n = Math.round(d * 100)
+  return n > 0 ? `+${n}%` : `${n}%`.replace('-', '−')
+}
+
+export const fechaMes = (valor) =>
+  valor ? new Date(`${String(valor).slice(0, 7)}-15T12:00:00`).toLocaleDateString('es-MX', { month: 'short', year: 'numeric' }) : '—'
+
 export const money = (n) =>
   (n || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })
 

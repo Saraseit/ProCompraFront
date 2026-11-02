@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   LayoutDashboard, ClipboardList, ShoppingCart, Building2, Receipt, Wallet,
-  BarChart3, Users, LogOut, Menu,
+  BarChart3, Users, LogOut, Menu, TrendingUp,
 } from 'lucide-react'
 import { supabase } from './supabaseClient'
 import api from './api'
@@ -14,7 +14,8 @@ import Proveedores from './pages/Proveedores'
 import Usuarios from './pages/Usuarios'
 import Facturas from './pages/Facturas'
 import Credito from './pages/Credito'
-import { veFacturas, etiquetaRol } from './constants'
+import Precios from './pages/Precios'
+import { veFacturas, esOperacion, etiquetaRol } from './constants'
 import BotonTema from './ui/BotonTema'
 import { PantallaCarga } from './ui/Carga'
 import Campana from './ui/Campana'
@@ -36,6 +37,7 @@ function App() {
   const [filtroOrdenes, setFiltroOrdenes] = useState('')
   const [menuAbierto, setMenuAbierto] = useState(false)
   const [ordenAAbrir, setOrdenAAbrir] = useState(null)
+  const [precioAAbrir, setPrecioAAbrir] = useState(null)
   const [conteos, setConteos] = useState({ reqs: 0, autorizacion: 0, facturas: 0, credito: 0 })
 
   // El perfil cargado solo cuenta si pertenece a la sesión vigente.
@@ -49,6 +51,19 @@ function App() {
     if (leerHash() !== destino) window.history.pushState(null, '', `#${destino}`)
     window.scrollTo({ top: 0 })
   }
+
+  // Los avisos de precio (requerimientos, órdenes) abren la ficha del insumo.
+  useEffect(() => {
+    const alVerPrecio = (e) => {
+      setPrecioAAbrir(e.detail)
+      setTab('precios')
+      if (leerHash() !== 'precios') window.history.pushState(null, '', '#precios')
+      window.scrollTo({ top: 0 })
+    }
+    window.addEventListener('pc:ver-precio', alVerPrecio)
+    return () => window.removeEventListener('pc:ver-precio', alVerPrecio)
+  }, [])
+  const precioAbierto = useCallback(() => setPrecioAAbrir(null), [])
 
   useEffect(() => {
     const alCambiar = () => { setFiltroOrdenes(''); setTab(leerHash()) }
@@ -113,6 +128,7 @@ function App() {
       ['requerimientos', 'Requerimientos', ClipboardList, conteos.reqs, 'requerimientos pendientes'],
       ['ordenes', 'Órdenes de compra', ShoppingCart, conteos.autorizacion, 'órdenes en autorización'],
       ['proveedores', 'Proveedores', Building2],
+      ...(esOperacion(rol) ? [['precios', 'Precios de insumos', TrendingUp]] : []),
     ]],
     ['Finanzas', [
       ...(veFacturas(rol) ? [['facturas', 'Facturas', Receipt, conteos.facturas, 'facturas sin vincular']] : []),
@@ -203,6 +219,7 @@ function App() {
             {actual === 'facturas' && <Facturas onCambio={refrescarConteos} />}
             {actual === 'credito' && <Credito usuario={usuario} onCambio={refrescarConteos} />}
             {actual === 'control' && <Control />}
+            {actual === 'precios' && <Precios claveInicial={precioAAbrir} onClaveAbierta={precioAbierto} />}
             {actual === 'usuarios' && <Usuarios usuario={usuario} />}
           </div>
         </main>
