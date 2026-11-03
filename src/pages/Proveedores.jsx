@@ -227,8 +227,9 @@ export function ModalProveedor({ data, onClose, onGuardado, zIndex }) {
           <div style={s.avisoError}>Los días de crédito deben ser un número entero entre 0 y 365.</div>
         )}
         <p style={s.nota}>
-          Los días de crédito calculan los vencimientos del estado de cuenta: corren desde la
-          fecha de la factura (o de la recepción, si aún no hay factura).
+          Con días de crédito, las órdenes de este proveedor nacen a crédito: no esperan un pago
+          previo y su saldo se lleva en Crédito y en Pagos. Los días corren desde la fecha de la
+          factura (o de la recepción, si aún no hay factura). Vacío o 0 = de contado.
         </p>
         <button
           style={{ ...s.btnPrimary, width: '100%', marginTop: 16,

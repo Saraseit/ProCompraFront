@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Search, X, Paperclip, ShoppingCart, SearchX, Filter, Link2 } from 'lucide-react'
+import { Search, X, Paperclip, ShoppingCart, SearchX, Filter, Link2, Trash2 } from 'lucide-react'
 import api from '../api'
-import { ESTADOS, money, fechaCorta, mensajeError } from '../constants'
-import { useToast } from '../ui/feedback-context'
+import { ESTADOS, money, fechaCorta, mensajeError, puedeBorrarTodo } from '../constants'
+import { useToast, useConfirm } from '../ui/feedback-context'
 import { CargaTarjetas } from '../ui/Carga'
 import Vacio from '../ui/Vacio'
 import { C } from '../ui/tema'
@@ -17,7 +17,11 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio, abrirOr
   const [busqueda, setBusqueda] = useState('')
   const [buscadorActivo, setBuscadorActivo] = useState(false)
   const [ordenAbierta, setOrdenAbierta] = useState(null)
+  // Modo de borrado (solo admin): las tarjetas se marcan en vez de abrirse.
+  const [marcadas, setMarcadas] = useState(null)
+  const [borrando, setBorrando] = useState(false)
   const toast = useToast()
+  const confirmar = useConfirm()
 
   async function cargarOrdenes() {
     setCargando(true)
@@ -74,6 +78,35 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio, abrirOr
     }
   }
 
+  const nMarcadas = marcadas ? Object.values(marcadas).filter(Boolean).length : 0
+  const marcar = (id) => setMarcadas((m) => ({ ...m, [id]: !m[id] }))
+
+  async function borrarMarcadas() {
+    const ids = Object.keys(marcadas).filter((id) => marcadas[id])
+    const r = await confirmar({
+      titulo: `Borrar ${ids.length} orden${ids.length === 1 ? '' : 'es'} por completo`,
+      mensaje: 'Se eliminan sus partidas, pagos, logística, documentos e historial, y no se puede recuperar. '
+        + 'Las facturas vinculadas quedan sin vincular.',
+      textoBoton: 'Borrar definitivamente', peligro: true,
+      casilla: 'Borrar también sus requerimientos (si no, vuelven a pendientes)',
+    })
+    if (!r) return
+    setBorrando(true)
+    try {
+      const { data } = await api.post('/ordenes/borrar', { ids, con_requerimientos: r.casilla })
+      toast(`Se borraron ${data.borradas} orden(es)`
+        + (data.requerimientos_borrados ? ` y ${data.requerimientos_borrados} requerimiento(s)` : '')
+        + (data.requerimientos_liberados ? `; ${data.requerimientos_liberados} requerimiento(s) volvieron a pendientes` : ''))
+      setMarcadas(null)
+      await cargarOrdenes()
+      if (onCambio) onCambio()
+    } catch (e) {
+      toast('No se pudieron borrar: ' + mensajeError(e), 'error')
+    } finally {
+      setBorrando(false)
+    }
+  }
+
   const folioDe = (id) => ordenes.find((x) => x.id === id)?.folio
   const termino = busqueda.trim().toLowerCase()
   const visibles = termino
@@ -95,6 +128,13 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio, abrirOr
             El folio es el número consecutivo que identifica cada orden ante el proveedor.
           </p>
         </div>
+        <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+        {puedeBorrarTodo(usuario.rol) && !marcadas && (
+          <button style={s.btnBorrar} onClick={() => setMarcadas({})}
+            title="Marcar órdenes para borrarlas por completo (solo admin)">
+            <Trash2 size={14} /> Borrar órdenes
+          </button>
+        )}
         <select style={s.select} value={filtro} onChange={(e) => setFiltro(e.target.value)}>
           <option value="">Todas las activas</option>
           {Object.entries(ESTADOS).map(([k, v]) => (
@@ -103,7 +143,22 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio, abrirOr
             </option>
           ))}
         </select>
+        </div>
       </div>
+
+      {marcadas && (
+        <div style={s.barraBorrar}>
+          <span style={{ flex:1, minWidth:200 }}>
+            <b>Borrado definitivo.</b> Marca las órdenes de prueba o con error ·{' '}
+            {nMarcadas} marcada{nMarcadas === 1 ? '' : 's'}
+          </span>
+          <button style={s.btnGhost} onClick={() => setMarcadas(null)}>Cancelar</button>
+          <button style={{ ...s.btnPeligro, opacity: nMarcadas && !borrando ? 1 : 0.45 }}
+            disabled={!nMarcadas || borrando} onClick={borrarMarcadas}>
+            {borrando ? 'Borrando...' : `Borrar ${nMarcadas || ''} definitivamente`}
+          </button>
+        </div>
+      )}
 
       <div style={{ ...s.buscador, ...(buscadorActivo ? s.buscadorActivo : {}) }}>
         <Search size={17} style={s.lupa} aria-hidden />
@@ -131,11 +186,15 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio, abrirOr
 
       <div style={s.grid}>
         {visibles.map((o) => (
-          <button key={o.id} className="pc-elevable"
-            style={{ ...s.card, borderLeft: `4px solid ${(ESTADOS[o.estado] || ESTADOS.borrador).color}` }}
-            onClick={() => abrirOrden(o)}>
+          <button key={o.id} className="pc-elevable" aria-pressed={marcadas ? !!marcadas[o.id] : undefined}
+            style={{ ...s.card, borderLeft: `4px solid ${(ESTADOS[o.estado] || ESTADOS.borrador).color}`,
+                     ...(marcadas?.[o.id] ? s.cardMarcada : {}) }}
+            onClick={() => (marcadas ? marcar(o.id) : abrirOrden(o))}>
             <div style={s.cardTop}>
-              <span style={s.folioTag}>Folio #{o.folio}</span>
+              <span style={s.folioTag}>
+                {marcadas && <input type="checkbox" readOnly checked={!!marcadas[o.id]} tabIndex={-1} style={{ marginRight:6 }} />}
+                Folio #{o.folio}
+              </span>
               <Badge estado={o.estado} />
             </div>
             <div style={s.prov}>{o.proveedor?.nombre || 'Sin proveedor'}</div>
@@ -183,6 +242,7 @@ export default function Ordenes({ usuario, filtroInicial = '', onCambio, abrirOr
           onCambio={() => refrescarOrden(ordenAbierta.id)}
           onDescargarPdf={descargarPdf}
           onAbrirOrden={(id) => abrirOrden({ id })}
+          onBorrada={() => { setOrdenAbierta(null); cargarOrdenes(); if (onCambio) onCambio() }}
         />
       )}
     </div>
@@ -222,6 +282,13 @@ const s = {
   meta: { fontSize:12, color:'var(--pc-gris)', display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' },
   clip: { display:'inline-flex', alignItems:'center', gap:3, color:'var(--pc-gris-2)' },
   total: { fontSize:18, fontWeight:700, marginTop:4 },
+  btnBorrar: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', padding:'9px 12px', borderRadius:8,
+               fontSize:13, fontWeight:600, cursor:'pointer', color:'var(--pc-rojo)', display:'inline-flex', alignItems:'center', gap:6 },
+  barraBorrar: { display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', padding:'11px 14px', marginBottom:14,
+                 borderRadius:10, background:'var(--pc-rojo-bg)', border:'1px solid var(--pc-rojo)', color:'var(--pc-tinta)', fontSize:13 },
+  btnPeligro: { background:'var(--pc-rojo-solido)', color:'#fff', border:'none', padding:'10px 16px', borderRadius:9,
+                fontSize:13, fontWeight:600, cursor:'pointer' },
+  cardMarcada: { outline:'2px solid var(--pc-rojo)', outlineOffset:-1, background:'var(--pc-rojo-bg)' },
   btnGhost: { background:'var(--pc-superficie)', border:'1px solid var(--pc-borde)', padding:'10px 16px', borderRadius:9, fontSize:13, fontWeight:600, cursor:'pointer', color:'var(--pc-tinta)' },
   complemento: { alignSelf:'flex-start', display:'inline-flex', alignItems:'center', gap:4, fontSize:11, fontWeight:600,
                  color:C.aqua, background:C.aquaBg, padding:'2px 8px', borderRadius:20 },

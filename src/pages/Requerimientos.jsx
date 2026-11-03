@@ -1,9 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
-import { Plus, Pencil, ClipboardCheck, Sparkles } from 'lucide-react'
+import { Plus, Pencil, ClipboardCheck, Sparkles, Trash2 } from 'lucide-react'
 import api from '../api'
-import { money, mensajeError, fechaCorta, hoy, isoLocal, PROVEEDOR_VACIO, UNIDADES, esOperacion } from '../constants'
+import {
+  money, mensajeError, fechaCorta, hoy, isoLocal, PROVEEDOR_VACIO, UNIDADES, esOperacion, puedeBorrarTodo, daCredito,
+} from '../constants'
 import Modal, { ModalHead, Label } from '../ui/Modal'
-import { useToast } from '../ui/feedback-context'
+import { useToast, useConfirm } from '../ui/feedback-context'
 import { C } from '../ui/tema'
 import { ModalProveedor } from './Proveedores'
 import ComboProveedor from '../ui/ComboProveedor'
@@ -47,7 +49,9 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
   const [sel, setSel] = useState({})
   const [generando, setGenerando] = useState(false)
   const [vista, setVista] = useState(leerVista)
+  const [borrando, setBorrando] = useState(false)
   const toast = useToast()
+  const confirmar = useConfirm()
 
   const cambiarVista = (v) => {
     setVista(v)
@@ -116,11 +120,13 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
     seleccionados.forEach((r) => {
       const provId = r.proveedor_sug || '__sin_proveedor__'
       const provNombre = r.proveedor?.nombre || 'Sin proveedor'
-      if (!g[provId]) g[provId] = { provId, provNombre, items: [] }
+      // Con quien da crédito la orden nace a crédito (lo decide el backend).
+      const credito = daCredito(proveedores.find((p) => p.id === r.proveedor_sug))
+      if (!g[provId]) g[provId] = { provId, provNombre, credito, items: [] }
       g[provId].items.push(r)
     })
     return Object.values(g)
-  }, [seleccionados])
+  }, [seleccionados, proveedores])
 
   async function generarOrdenes() {
     if (seleccionados.length === 0) return
@@ -158,6 +164,32 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
     }
   }
 
+  async function borrarSeleccionados() {
+    const n = seleccionados.length
+    const ok = await confirmar({
+      titulo: `Borrar ${n} requerimiento${n === 1 ? '' : 's'} por completo`,
+      mensaje: 'Se eliminan de la base de datos y no se pueden recuperar. Úsalo para capturas de prueba o con error; '
+        + 'para descartar uno real basta con no generarle orden.',
+      textoBoton: 'Borrar definitivamente', peligro: true,
+    })
+    if (!ok) return
+    setBorrando(true)
+    try {
+      const { data } = await api.post('/requerimientos/borrar', { ids: seleccionados.map((r) => r.id) })
+      toast(`Se borraron ${data.borrados} requerimiento(s)`)
+      if (data.omitidos?.length) {
+        toast(`${data.omitidos.length} no se borraron porque ya están en una orden`
+          + `${data.omitidos[0].folio ? ` (#${data.omitidos[0].folio})` : ''}. Bórralos desde la orden.`, 'error')
+      }
+      setSel({})
+      await recargarReqs()
+    } catch (e) {
+      toast('No se pudieron borrar: ' + mensajeError(e), 'error')
+    } finally {
+      setBorrando(false)
+    }
+  }
+
   const toggle = (id) => setSel((s) => ({ ...s, [id]: !s[id] }))
   const nSel = seleccionados.length
   // Almacén y compras conviven: los dos capturan, editan y generan órdenes.
@@ -187,6 +219,12 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
           </p>
         </div>
         <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+          {puedeBorrarTodo(usuario.rol) && nSel > 0 && (
+            <button style={{ ...s.btnPeligro, opacity: borrando ? 0.5 : 1 }} disabled={borrando}
+              onClick={borrarSeleccionados} title="Borrar por completo los requerimientos marcados (solo admin)">
+              <Trash2 size={15} /> {borrando ? 'Borrando...' : `Borrar (${nSel})`}
+            </button>
+          )}
           <button style={s.btnGhostLg} onClick={abrirNuevo}>
             <Plus size={16} /> Nuevo requerimiento
           </button>
@@ -220,7 +258,7 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
             <>
               <strong>{nSel}</strong> requerimiento(s) seleccionado(s) → se crearán{' '}
               <strong>{grupos.length}</strong> orden(es):{' '}
-              {grupos.map((g) => `${g.provNombre} (${g.items.length})`).join(' · ')}
+              {grupos.map((g) => `${g.provNombre} (${g.items.length}${g.credito ? ', a crédito' : ''})`).join(' · ')}
             </>
           )}
         </div>
@@ -592,6 +630,9 @@ const s = {
                 borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
   btnGhostLg: { background:'var(--pc-superficie)', color:'var(--pc-tinta)', border:'1px solid var(--pc-borde)',
                 padding:'10px 16px', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
+  btnPeligro: { background:'var(--pc-superficie)', color:'var(--pc-rojo)', border:'1px solid var(--pc-rojo)',
+                padding:'10px 16px', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer',
+                display:'inline-flex', alignItems:'center', gap:6 },
   btnGhost: { background:'transparent', border:'1px solid var(--pc-borde)', padding:'5px 10px',
               borderRadius:7, fontSize:12, fontWeight:500, cursor:'pointer' },
   labelGap: { marginTop:12 },

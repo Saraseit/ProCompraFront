@@ -2,10 +2,10 @@ import { useState } from 'react'
 import api from '../../api'
 import {
   ESTADOS, METODOS_PAGO, etiquetaMetodo, money, fechaCorta, mensajeError,
-  esOperacion, esContabilidad,
+  esOperacion, esContabilidad, puedeBorrarTodo,
 } from '../../constants'
 import {
-  Download, Paperclip, Plus, ArrowRight, Check, CheckCircle2, XCircle, Info, Pencil, PackageOpen, Link2, History,
+  Download, Paperclip, Plus, ArrowRight, Check, CheckCircle2, XCircle, Info, Pencil, PackageOpen, Link2, History, Trash2,
 } from 'lucide-react'
 import Modal, { BotonCerrar } from '../../ui/Modal'
 import { useToast, useConfirm } from '../../ui/feedback-context'
@@ -61,7 +61,7 @@ function RepartoSurtido({ surtido, onAbrirOrden }) {
   )
 }
 
-export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescargarPdf, onAbrirOrden }) {
+export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescargarPdf, onAbrirOrden, onBorrada }) {
   const [pestana, setPestana] = useState('detalle')
   const [procesando, setProcesando] = useState(null)
   const [editando, setEditando] = useState(false)
@@ -126,6 +126,28 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
     if (motivo) cambiarEstado('cancelar', 'rechazada', motivo, `Orden #${orden.folio} cancelada`)
   }
 
+  // Solo admin: borra la orden de la base (capturas de prueba o con error).
+  const borrarDefinitivo = async () => {
+    const nReq = new Set((orden.partidas || []).map((p) => p.req_id).filter(Boolean)).size
+    const r = await confirmar({
+      titulo: `Borrar la orden #${orden.folio} por completo`,
+      mensaje: 'Se eliminan sus partidas, pagos, logística, documentos e historial, y no se puede recuperar. '
+        + 'Las facturas vinculadas quedan sin vincular. Para descartar una orden real usa Cancelar.',
+      textoBoton: 'Borrar definitivamente', peligro: true,
+      casilla: nReq ? `Borrar también ${nReq === 1 ? 'su requerimiento' : `sus ${nReq} requerimientos`} (si no, vuelven a pendientes)` : undefined,
+    })
+    if (!r || procesando) return
+    setProcesando('borrar')
+    try {
+      await api.post('/ordenes/borrar', { ids: [orden.id], con_requerimientos: !!r.casilla })
+      toast(`Orden #${orden.folio} borrada`)
+      await (onBorrada || onClose)()
+    } catch (err) {
+      toast('No se pudo borrar: ' + mensajeError(err), 'error')
+      setProcesando(null)
+    }
+  }
+
   const guardarCampo = (patch) => ejecutar('editar', () => api.put(`/ordenes/${orden.id}`, patch))
 
   const adjuntarCotizacion = ([archivo]) => ejecutar('cotizacion', async () => {
@@ -166,6 +188,12 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
               </button>
             )}
             <button style={s.btnPdf} onClick={() => onDescargarPdf(orden)}><Download size={14} /> PDF</button>
+            {puedeBorrarTodo(usuario.rol) && (
+              <button style={{ ...s.btnPdf, color:'var(--pc-rojo)' }} disabled={ocupado} onClick={borrarDefinitivo}
+                title="Borrar la orden por completo (solo admin)" aria-label="Borrar la orden por completo">
+                <Trash2 size={14} />
+              </button>
+            )}
             <BotonCerrar onClick={onClose} />
           </div>
         </div>

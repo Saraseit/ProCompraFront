@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
   LayoutDashboard, ClipboardList, ShoppingCart, Building2, Receipt, Wallet,
-  BarChart3, Users, LogOut, Menu, TrendingUp,
+  BarChart3, Users, LogOut, Menu, TrendingUp, Banknote,
 } from 'lucide-react'
 import { supabase } from './supabaseClient'
 import api from './api'
@@ -15,7 +15,8 @@ import Usuarios from './pages/Usuarios'
 import Facturas from './pages/Facturas'
 import Credito from './pages/Credito'
 import Precios from './pages/Precios'
-import { veFacturas, esOperacion, etiquetaRol } from './constants'
+import Pagos from './pages/Pagos'
+import { veFacturas, esOperacion, esContabilidad, etiquetaRol } from './constants'
 import BotonTema from './ui/BotonTema'
 import { PantallaCarga } from './ui/Carga'
 import Campana from './ui/Campana'
@@ -132,6 +133,7 @@ function App() {
     ]],
     ['Finanzas', [
       ...(veFacturas(rol) ? [['facturas', 'Facturas', Receipt, conteos.facturas, 'facturas sin vincular']] : []),
+      ...(esContabilidad(rol) ? [['pagos', 'Pagos', Banknote]] : []),
       ...(veFacturas(rol) ? [['credito', 'Crédito', Wallet, conteos.credito, 'órdenes a crédito vencidas']] : []),
       ...(veControl(rol) ? [['control', 'Control de gastos', BarChart3]] : []),
     ]],
@@ -217,6 +219,7 @@ function App() {
             )}
             {actual === 'proveedores' && <Proveedores usuario={usuario} />}
             {actual === 'facturas' && <Facturas onCambio={refrescarConteos} />}
+            {actual === 'pagos' && <Pagos usuario={usuario} onCambio={refrescarConteos} />}
             {actual === 'credito' && <Credito usuario={usuario} onCambio={refrescarConteos} />}
             {actual === 'control' && <Control />}
             {actual === 'precios' && <Precios claveInicial={precioAAbrir} onClaveAbierta={precioAbierto} />}

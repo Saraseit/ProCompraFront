@@ -53,10 +53,14 @@ export default function FeedbackProvider({ children }) {
   )
 }
 
-function Dialogo({ titulo, mensaje, textoBoton = 'Confirmar', peligro, pedirTexto, placeholder, onCerrar }) {
+// Con `casilla` (texto de una opción) confirmar resuelve { casilla: true|false }.
+function Dialogo({ titulo, mensaje, textoBoton = 'Confirmar', peligro, pedirTexto, placeholder, casilla, onCerrar }) {
   const [texto, setTexto] = useState('')
+  const [marcada, setMarcada] = useState(false)
   const puede = !pedirTexto || texto.trim()
-  const aceptar = () => { if (puede) onCerrar(pedirTexto ? texto.trim() : true) }
+  const aceptar = () => {
+    if (puede) onCerrar(pedirTexto ? texto.trim() : casilla ? { casilla: marcada } : true)
+  }
 
   return (
     <Modal onClose={() => onCerrar(null)} maxWidth={440} zIndex={90}>
@@ -77,6 +81,12 @@ function Dialogo({ titulo, mensaje, textoBoton = 'Confirmar', peligro, pedirText
               placeholder={placeholder}
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) aceptar() }} />
+          </label>
+        )}
+        {casilla && (
+          <label style={s.casilla}>
+            <input type="checkbox" checked={marcada} onChange={(e) => setMarcada(e.target.checked)} />
+            {casilla}
           </label>
         )}
         <div style={s.botones}>
@@ -113,6 +123,8 @@ const s = {
   mensaje: { fontSize: 13.5, color: 'var(--pc-texto-suave)', margin: '6px 0 0', lineHeight: 1.55 },
   textarea: { width: '100%', border: `1px solid ${C.borde}`, borderRadius: 8, padding: '9px 11px',
               fontSize: 14, boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' },
+  casilla: { display: 'flex', alignItems: 'flex-start', gap: 8, marginTop: 16, fontSize: 13.5,
+             color: C.tinta, lineHeight: 1.45, cursor: 'pointer' },
   botones: { display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 22 },
   btnGhost: { background: 'var(--pc-superficie)', border: `1px solid ${C.borde}`, padding: '9px 16px',
               borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: C.tinta },

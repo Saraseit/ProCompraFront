@@ -20,6 +20,10 @@ export const METODOS_CON_ENTREGA = ['efectivo', 'tarjeta_debito', 'tarjeta_credi
 export const esAdmin = (rol) => ['admin', 'pagos'].includes(rol)
 export const esOperacion = (rol) => ['admin', 'pagos', 'compras', 'almacen'].includes(rol)
 export const esContabilidad = (rol) => ['admin', 'pagos'].includes(rol)
+// Borrar por completo órdenes, requerimientos o pagos: solo el administrador.
+export const puedeBorrarTodo = (rol) => rol === 'admin'
+// Con días de crédito pactados, las órdenes del proveedor nacen a crédito.
+export const daCredito = (proveedor) => Number(proveedor?.dias_credito) > 0
 export const ROLES = {
   admin: 'Administrador',
   pagos: 'Contabilidad',

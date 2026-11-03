@@ -103,7 +103,7 @@ export default function Credito({ usuario, onCambio }) {
         <div>
           <h2 style={s.h2}>Crédito con proveedores</h2>
           <p style={s.help}>
-            Saldo y vencimientos de las compras a crédito. Abre una orden para registrar un abono.
+            Saldo y vencimientos de las compras a crédito por proveedor. Los abonos se registran en Pagos.
           </p>
         </div>
         <label style={s.toggle}>
@@ -239,6 +239,7 @@ export default function Credito({ usuario, onCambio }) {
           onCambio={() => refrescarOrden(ordenAbierta.id)}
           onDescargarPdf={descargarPdf}
           onAbrirOrden={abrirOrden}
+          onBorrada={() => { setOrdenAbierta(null); cargar(); if (onCambio) onCambio() }}
         />
       )}
     </div>
