@@ -12,11 +12,9 @@ const SITUACION = {
   vencida:    { label: 'Vencida',    color: 'var(--pc-rojo)',        bg: 'var(--pc-rojo-bg)' },
   por_vencer: { label: 'Por vencer', color: 'var(--pc-ambar-texto)', bg: 'var(--pc-ambar-bg)' },
   vigente:    { label: 'Al corriente', color: 'var(--pc-verde)',     bg: 'var(--pc-verde-bg)' },
-  sin_plazo:  { label: 'Sin plazo',  color: 'var(--pc-gris-2)',      bg: 'var(--pc-superficie-3)' },
+  sin_fecha:  { label: 'Sin fecha de pago', color: 'var(--pc-gris-2)', bg: 'var(--pc-superficie-3)' },
   liquidada:  { label: 'Liquidada',  color: C.aqua,                  bg: C.aquaBg },
 }
-
-const ORIGEN = { factura: 'factura', recepcion: 'recepción', orden: 'orden' }
 
 function cuandoVence(m) {
   if (m.situacion === 'liquidada' || m.dias == null) return null
@@ -26,7 +24,7 @@ function cuandoVence(m) {
 }
 
 function Chip({ situacion }) {
-  const e = SITUACION[situacion] || SITUACION.sin_plazo
+  const e = SITUACION[situacion] || SITUACION.sin_fecha
   return <span style={{ ...s.chip, color: e.color, background: e.bg }}>{e.label}</span>
 }
 
@@ -86,7 +84,7 @@ export default function Credito({ usuario, onCambio }) {
 
   const { totales } = datos
   const proveedores = verLiquidadas ? datos.proveedores : datos.proveedores.filter((p) => p.saldo > 0)
-  const sinPlazo = datos.proveedores.filter((p) => p.saldo > 0 && p.dias_credito == null)
+  const sinFecha = totales.ordenes_sin_fecha || 0
   const alternar = (id) => setAbiertos((a) => ({ ...a, [id]: !a[id] }))
 
   const kpis = [
@@ -122,10 +120,11 @@ export default function Credito({ usuario, onCambio }) {
         ))}
       </div>
 
-      {sinPlazo.length > 0 && (
+      {sinFecha > 0 && (
         <div style={s.aviso}>
-          <strong>Sin días de crédito:</strong> {sinPlazo.map((p) => p.nombre).join(', ')}.{' '}
-          Sin plazo no se puede calcular cuándo vence. Captúralo en Proveedores → Editar → Días de crédito.
+          <strong>{sinFecha} compra{sinFecha === 1 ? '' : 's'} a crédito sin fecha de pago.</strong>{' '}
+          Sin fecha no se sabe cuándo vence ni aparece en los pagos de la semana. Ponla desde la orden
+          (Fechas de pago) o en Pagos → Sin fecha de pago.
         </div>
       )}
 
@@ -151,10 +150,9 @@ export default function Credito({ usuario, onCambio }) {
                   <div style={s.prov}>{p.nombre}</div>
                   <div style={s.meta}>
                     {p.rfc && <span style={{ fontFamily: 'var(--pc-mono)' }}>{p.rfc} · </span>}
-                    {p.dias_credito == null
-                      ? <span style={{ color: 'var(--pc-ambar-texto)' }}>sin días de crédito</span>
-                      : `${p.dias_credito} días de crédito`}
-                    {p.proximo_vencimiento && ` · próximo vencimiento ${fechaCorta(p.proximo_vencimiento)}`}
+                    {p.ordenes_abiertas} compra{p.ordenes_abiertas === 1 ? '' : 's'} abierta{p.ordenes_abiertas === 1 ? '' : 's'}
+                    {p.proximo_vencimiento && ` · próximo pago ${fechaCorta(p.proximo_vencimiento)}`}
+                    {p.ordenes_sin_fecha > 0 && <span style={{ color: 'var(--pc-ambar-texto)' }}> · {p.ordenes_sin_fecha} sin fecha</span>}
                   </div>
                 </div>
                 <div style={s.cifras}>
@@ -179,8 +177,7 @@ export default function Credito({ usuario, onCambio }) {
                       <tr>
                         <th style={s.th}>Orden</th>
                         <th style={s.th}>Factura</th>
-                        <th style={s.th}>Plazo desde</th>
-                        <th style={s.th}>Vence</th>
+                        <th style={s.th}>Próximo pago</th>
                         <th style={{ ...s.th, textAlign: 'right' }}>Importe</th>
                         <th style={{ ...s.th, textAlign: 'right' }}>Abonos</th>
                         <th style={{ ...s.th, textAlign: 'right' }}>Saldo</th>
@@ -195,14 +192,16 @@ export default function Credito({ usuario, onCambio }) {
                           </td>
                           <td style={{ ...s.td, fontFamily: 'var(--pc-mono)', fontSize: 12 }}>{m.factura || '—'}</td>
                           <td style={s.td}>
-                            {fechaCorta(m.fecha_base)}
-                            <div style={s.sub}>{ORIGEN[m.origen_base]}</div>
-                          </td>
-                          <td style={s.td}>
-                            {m.vencimiento ? fechaCorta(m.vencimiento) : '—'}
+                            {m.vencimiento ? <>{fechaCorta(m.vencimiento)} · {money(m.proximo_pago)}</> : '—'}
                             {cuandoVence(m) && <div style={s.sub}>{cuandoVence(m)}</div>}
+                            {m.cuotas?.length > 1 && (
+                              <div style={s.sub}>{m.cuotas.filter((c) => c.estado === 'pagada').length} de {m.cuotas.length} pagos hechos</div>
+                            )}
                           </td>
-                          <td style={{ ...s.td, textAlign: 'right' }}>{money(m.importe)}</td>
+                          <td style={{ ...s.td, textAlign: 'right' }}>
+                            {money(m.importe)}
+                            {m.recargo > 0 && <div style={s.sub}>incl. {money(m.recargo)} recargo</div>}
+                          </td>
                           <td style={{ ...s.td, textAlign: 'right' }}
                             title={m.pagos.map((pg) => `${fechaCorta(pg.fecha_pago)} · ${money(pg.monto)}${pg.referencia ? ` · ${pg.referencia}` : ''}`).join('\n')}>
                             {m.pagado > 0 ? money(m.pagado) : '—'}
@@ -215,7 +214,7 @@ export default function Credito({ usuario, onCambio }) {
                     </tbody>
                     <tfoot>
                       <tr>
-                        <td style={s.tf} colSpan={4}>Total</td>
+                        <td style={s.tf} colSpan={3}>Total</td>
                         <td style={{ ...s.tf, textAlign: 'right' }}>{money(p.cargos)}</td>
                         <td style={{ ...s.tf, textAlign: 'right' }}>{money(p.abonos)}</td>
                         <td style={{ ...s.tf, textAlign: 'right' }}>{money(p.saldo)}</td>

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Pencil, Search, Building2 } from 'lucide-react'
 import api from '../api'
-import { mensajeError, PROVEEDOR_VACIO, esAdmin, esOperacion } from '../constants'
+import { mensajeError, PROVEEDOR_VACIO, esAdmin, esOperacion, daCredito } from '../constants'
 import Modal, { ModalHead, Label } from '../ui/Modal'
 import { useToast, useConfirm } from '../ui/feedback-context'
 import { FilasCarga } from '../ui/Carga'
@@ -121,7 +121,7 @@ export default function Proveedores({ usuario }) {
                 <td style={s.td}>{p.telefono || '—'}</td>
                 <td style={s.td}>{p.cuenta_bancaria || '—'}</td>
                 <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
-                  {p.dias_credito == null ? '—' : p.dias_credito === 0 ? 'Contado' : `${p.dias_credito} días`}
+                  {daCredito(p) ? 'Nos da crédito' : '—'}
                 </td>
                 {puedeEditar && (
                   <td style={s.td}>
@@ -163,18 +163,20 @@ export function ModalProveedor({ data, onClose, onGuardado, zIndex }) {
   const set = (k, v) => setForm({ ...form, [k]: v })
   const esNuevo = !form.id
   const nombre = (form.nombre || '').trim()
-  const diasTexto = String(form.dias_credito ?? '').trim()
-  const dias = diasTexto === '' ? null : Number(diasTexto)
-  const diasValidos = dias === null || (Number.isInteger(dias) && dias >= 0 && dias <= 365)
-  const puedeGuardar = !!nombre && diasValidos && !guardando
+  const credito = daCredito(form)
+  const puedeGuardar = !!nombre && !guardando
 
   async function guardar() {
     if (!puedeGuardar) return
     setGuardando(true)
     try {
-      const datos = { ...form, nombre, dias_credito: dias }
-      // Solo se manda si hay plazo o si se quiere quitar uno que ya existía.
-      if (dias === null && data.dias_credito == null) delete datos.dias_credito
+      // El plazo ya no es del proveedor (va en cada compra): dias_credito no se toca.
+      const { dias_credito: _plazoViejo, ...resto } = form
+      const datos = { ...resto, nombre }
+      // La marca se manda si se activa o si ya existía; así un alta sin crédito
+      // no depende de que la base ya tenga la columna.
+      if (credito || 'da_credito' in data) datos.da_credito = credito
+      else delete datos.da_credito
       const res = datos.id
         ? await api.put(`/proveedores/${datos.id}`, datos)
         : await api.post('/proveedores', datos)
@@ -217,19 +219,17 @@ export function ModalProveedor({ data, onClose, onGuardado, zIndex }) {
             <input style={s.input} value={form.cuenta_bancaria || ''}
               onChange={(e) => set('cuenta_bancaria', e.target.value)} />
           </Field>
-          <Field label="Días de crédito">
-            <input type="number" min="0" max="365" step="1" style={s.input}
-              placeholder="Sin crédito" value={form.dias_credito ?? ''}
-              onChange={(e) => set('dias_credito', e.target.value)} />
+          <Field label="Crédito">
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, padding: '9px 0', cursor: 'pointer' }}>
+              <input type="checkbox" checked={credito} onChange={(e) => set('da_credito', e.target.checked)} />
+              Nos da crédito
+            </label>
           </Field>
         </div>
-        {!diasValidos && (
-          <div style={s.avisoError}>Los días de crédito deben ser un número entero entre 0 y 365.</div>
-        )}
         <p style={s.nota}>
-          Con días de crédito, las órdenes de este proveedor nacen a crédito: no esperan un pago
-          previo y su saldo se lleva en Crédito y en Pagos. Los días corren desde la fecha de la
-          factura (o de la recepción, si aún no hay factura). Vacío o 0 = de contado.
+          Las órdenes de un proveedor que nos da crédito nacen a crédito: no esperan un pago previo y su
+          saldo se lleva en Crédito y en Pagos. Cuándo se paga cada compra (una o varias fechas) se captura
+          en la orden, porque cambia en cada compra.
         </p>
         <button
           style={{ ...s.btnPrimary, width: '100%', marginTop: 16,

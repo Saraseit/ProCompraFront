@@ -16,12 +16,62 @@ import BotonArchivo from './BotonArchivo'
 import { ACEPTA_DOCUMENTOS, abrirEnPestana, subirAdjunto } from './archivos'
 import { PanelPago, PanelLogistica, PanelComprobacion, ResumenDinero } from './Paneles'
 import EditarOrden from './EditarOrden'
+import Calendario from './Calendario'
 import Surtido from './Surtido'
 import { ChipPrecio } from '../../ui/precios'
 import { useEvaluacion } from '../../ui/evaluacion'
 
 const ESTADOS_SURTIDO = ['borrador', 'autorizacion', 'autorizada', 'pagada', 'recoleccion', 'comprobacion']
 const EVENTOS_CAMBIO = ['Orden modificada', 'Surtido parcial']
+
+const ESTADO_CUOTA = {
+  pagada:    { label: 'Pagado',    color: 'var(--pc-verde)',       bg: 'var(--pc-verde-bg)' },
+  vencida:   { label: 'Vencido',   color: 'var(--pc-rojo)',        bg: 'var(--pc-rojo-bg)' },
+  pendiente: { label: 'Pendiente', color: 'var(--pc-ambar-texto)', bg: 'var(--pc-ambar-bg)' },
+}
+
+// Fechas de pago de una compra a crédito: cuándo y cuánto, y qué ya se cubrió.
+function CajaCalendario({ calendario: c, onEditar }) {
+  return (
+    <div style={s.box}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, marginBottom:8 }}>
+        <div style={{ ...s.boxTitle, margin:0 }}>Fechas de pago</div>
+        {onEditar && (
+          <button style={s.btnChico} onClick={onEditar}>{c.cuotas.length ? 'Cambiar fechas' : 'Poner fecha de pago'}</button>
+        )}
+      </div>
+      {c.cuotas.length === 0 && (
+        <div style={{ fontSize:12.5, color:'var(--pc-ambar-texto)' }}>
+          Sin fecha de pago todavía. Captúrala en cuanto se acuerde con el proveedor: sin ella esta compra no
+          aparece en los pagos de la semana.
+        </div>
+      )}
+      {c.cuotas.map((q) => {
+        const e = ESTADO_CUOTA[q.estado] || ESTADO_CUOTA.pendiente
+        return (
+          <div key={q.id || q.numero} style={{ ...s.lineItem, alignItems:'center' }}>
+            <span style={s.lineL}>
+              {fechaCorta(q.fecha)}{q.notas ? ` · ${q.notas}` : c.cuotas.length > 1 ? ` · pago ${q.numero} de ${c.cuotas.length}` : ''}
+            </span>
+            <span style={{ display:'flex', alignItems:'center', gap:8 }}>
+              {q.estado !== 'pagada' && q.pendiente < q.monto && (
+                <span style={{ fontSize:12, color:'var(--pc-gris)' }}>faltan {money(q.pendiente)} de</span>
+              )}
+              {money(q.monto)}
+              <span style={{ fontSize:11, fontWeight:600, padding:'1px 7px', borderRadius:20, color:e.color, background:e.bg }}>{e.label}</span>
+            </span>
+          </div>
+        )
+      })}
+      {(c.recargo > 0 || (c.sin_fecha > 0 && c.cuotas.length > 0)) && (
+        <div style={{ fontSize:12.5, color:'var(--pc-gris)', marginTop:6 }}>
+          {c.recargo > 0 && `Incluye ${money(c.recargo)} de recargo por diferir. `}
+          {c.sin_fecha > 0 && c.cuotas.length > 0 && `${money(c.sin_fecha)} siguen sin fecha.`}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function Badge({ estado }) {
   const e = ESTADOS[estado] || ESTADOS.borrador
@@ -66,6 +116,7 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
   const [procesando, setProcesando] = useState(null)
   const [editando, setEditando] = useState(false)
   const [surtiendo, setSurtiendo] = useState(false)
+  const [programando, setProgramando] = useState(false)
   const [obs, setObs] = useState(orden.observaciones || '')
   const toast = useToast()
   const confirmar = useConfirm()
@@ -355,6 +406,10 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
 
           <ResumenDinero orden={orden} />
 
+          {aCredito && orden.calendario && e !== 'rechazada' && (
+            <CajaCalendario calendario={orden.calendario} onEditar={op || conta ? () => setProgramando(true) : null} />
+          )}
+
           {/* ── Acciones según estado y rol ── */}
           {e === 'borrador' && (
             <div style={{ ...s.filaFin, marginTop:0 }}>
@@ -463,6 +518,13 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
       {editando && (
         <EditarOrden orden={orden} onClose={() => setEditando(false)}
           onGuardado={async () => { setEditando(false); await onCambio() }} />
+      )}
+      {programando && (
+        <Calendario ordenId={orden.id} folio={orden.folio}
+          base={Number(orden.monto_comprobado ?? orden.total ?? 0)}
+          pagado={orden.calendario?.pagado || 0} cuotas={orden.calendario?.cuotas || []}
+          onClose={() => setProgramando(false)}
+          onGuardado={async () => { setProgramando(false); await onCambio() }} />
       )}
       {surtiendo && (
         <Surtido orden={orden} onClose={() => setSurtiendo(false)}

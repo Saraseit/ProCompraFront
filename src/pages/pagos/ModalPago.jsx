@@ -20,7 +20,8 @@ export default function ModalPago({ ordenes, onClose, onHecho }) {
   const toast = useToast()
   const [metodo, setMetodo] = useState(() => formaSugerida(ordenes))
   const [datos, setDatos] = useState({ fecha_pago: hoy(), referencia: '', entregado_a: '', notas: '' })
-  const [montos, setMontos] = useState(() => Object.fromEntries(ordenes.map((o) => [o.id, String(o.saldo)])))
+  // De entrada se paga lo que toca ahora (lo de esta semana o el siguiente pago), no todo el saldo.
+  const [montos, setMontos] = useState(() => Object.fromEntries(ordenes.map((o) => [o.id, String(o.a_pagar ?? o.saldo)])))
   const [comprobante, setComprobante] = useState(null)
   const [guardando, setGuardando] = useState(false)
   const set = (k, v) => setDatos((d) => ({ ...d, [k]: v }))
@@ -79,7 +80,7 @@ export default function ModalPago({ ordenes, onClose, onHecho }) {
               <tr>
                 <th style={s.th}>Orden</th>
                 <th style={s.th}>Proveedor</th>
-                <th style={{ ...s.th, textAlign: 'right' }}>Saldo</th>
+                <th style={{ ...s.th, textAlign: 'right' }}>Toca / saldo</th>
                 <th style={{ ...s.th, textAlign: 'right', width: 140 }}>Se paga</th>
               </tr>
             </thead>
@@ -91,7 +92,10 @@ export default function ModalPago({ ordenes, onClose, onHecho }) {
                     <div style={s.sub}>{o.tipo === 'credito' ? 'Crédito' : 'Contado'}</div>
                   </td>
                   <td style={s.td}>{o.proveedor?.nombre || '—'}</td>
-                  <td style={{ ...s.td, textAlign: 'right' }}>{money(o.saldo)}</td>
+                  <td style={{ ...s.td, textAlign: 'right' }}>
+                    {money(o.a_pagar ?? o.saldo)}
+                    {o.a_pagar != null && o.a_pagar < o.saldo - 0.005 && <div style={s.sub}>de {money(o.saldo)}</div>}
+                  </td>
                   <td style={{ ...s.td, textAlign: 'right' }}>
                     <input type="number" min="0" step="0.01" aria-label={`Monto para la orden ${o.folio}`}
                       style={{ ...s.input, textAlign: 'right', padding: '6px 8px',

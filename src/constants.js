@@ -22,8 +22,10 @@ export const esOperacion = (rol) => ['admin', 'pagos', 'compras', 'almacen'].inc
 export const esContabilidad = (rol) => ['admin', 'pagos'].includes(rol)
 // Borrar por completo órdenes, requerimientos o pagos: solo el administrador.
 export const puedeBorrarTodo = (rol) => rol === 'admin'
-// Con días de crédito pactados, las órdenes del proveedor nacen a crédito.
-export const daCredito = (proveedor) => Number(proveedor?.dias_credito) > 0
+// Si el proveedor nos da crédito, sus órdenes nacen a crédito. Antes de la
+// fase 7 de la base no existía la marca y se deducía de los días de crédito.
+export const daCredito = (proveedor) =>
+  !!proveedor && ('da_credito' in proveedor ? !!proveedor.da_credito : Number(proveedor.dias_credito) > 0)
 export const ROLES = {
   admin: 'Administrador',
   pagos: 'Contabilidad',

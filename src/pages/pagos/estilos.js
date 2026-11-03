@@ -5,7 +5,7 @@ export const SITUACION = {
   vencida:    { label: 'Vencida',      color: 'var(--pc-rojo)',        bg: 'var(--pc-rojo-bg)' },
   por_vencer: { label: 'Por vencer',   color: 'var(--pc-ambar-texto)', bg: 'var(--pc-ambar-bg)' },
   vigente:    { label: 'Al corriente', color: 'var(--pc-verde)',       bg: 'var(--pc-verde-bg)' },
-  sin_plazo:  { label: 'Sin plazo',    color: 'var(--pc-gris-2)',      bg: 'var(--pc-superficie-3)' },
+  sin_fecha:  { label: 'Sin fecha',    color: 'var(--pc-gris-2)',      bg: 'var(--pc-superficie-3)' },
   contado:    { label: 'Por pagar',    color: C.aqua,                  bg: C.aquaBg },
 }
 
@@ -60,6 +60,8 @@ export const s = {
                 borderRadius: 9, fontSize: 14, fontWeight: 600, cursor: 'pointer' },
   btnGhost: { background: 'var(--pc-superficie)', border: '1px solid var(--pc-borde)', padding: '9px 14px',
               borderRadius: 9, fontSize: 13, fontWeight: 600, cursor: 'pointer', color: 'var(--pc-tinta)' },
+  enlace: { border: 'none', background: 'none', padding: 0, font: 'inherit', fontSize: 11.5, fontWeight: 600,
+            color: C.aqua, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 2, marginTop: 3 },
   btnBorrar: { background: 'none', border: '1px solid var(--pc-borde)', padding: '5px 8px', borderRadius: 7,
                cursor: 'pointer', color: 'var(--pc-rojo)', display: 'inline-grid', placeItems: 'center' },
   nota: { fontSize: 12.5, color: 'var(--pc-gris)', margin: '0 0 12px' },

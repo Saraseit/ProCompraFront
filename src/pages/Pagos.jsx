@@ -7,15 +7,16 @@ import ModalOrden from './orden/ModalOrden'
 import { descargarPdfOrden } from './orden/archivos'
 import ModalPago from './pagos/ModalPago'
 import Historial from './pagos/Historial'
+import Calendario from './orden/Calendario'
 import { s, SITUACION, cuandoVence } from './pagos/estilos'
 
 function Chip({ situacion }) {
-  const e = SITUACION[situacion] || SITUACION.sin_plazo
+  const e = SITUACION[situacion] || SITUACION.sin_fecha
   return <span style={{ ...s.chip, color: e.color, background: e.bg }}>{e.label}</span>
 }
 
 // Una tabla de órdenes por pagar (esta semana o después) con su selección.
-function Seccion({ titulo, ayuda, grupo, filas, sel, alternar, alternarTodas, onAbrirOrden, vacio }) {
+function Seccion({ titulo, ayuda, grupo, filas, sel, alternar, alternarTodas, onAbrirOrden, onProgramar, vacio }) {
   const marcadas = filas.filter((r) => sel[r.id]).length
   const todas = filas.length > 0 && marcadas === filas.length
   return (
@@ -47,7 +48,7 @@ function Seccion({ titulo, ayuda, grupo, filas, sel, alternar, alternarTodas, on
               <th style={s.th}>Vence</th>
               <th style={{ ...s.th, textAlign: 'right' }}>Importe</th>
               <th style={{ ...s.th, textAlign: 'right' }}>Abonado</th>
-              <th style={{ ...s.th, textAlign: 'right' }}>Saldo</th>
+              <th style={{ ...s.th, textAlign: 'right' }}>A pagar</th>
               <th style={s.th}>Situación</th>
             </tr>
           </thead>
@@ -71,10 +72,22 @@ function Seccion({ titulo, ayuda, grupo, filas, sel, alternar, alternarTodas, on
                 <td style={{ ...s.td, whiteSpace: 'nowrap' }}>
                   {r.vencimiento ? fechaCorta(r.vencimiento) : '—'}
                   {cuandoVence(r) && <div style={s.sub}>{cuandoVence(r)}</div>}
+                  {r.cuotas?.length > 1 && <div style={s.sub}>{r.cuotas.filter((c) => c.estado === 'pagada').length} de {r.cuotas.length} pagos</div>}
+                  {r.tipo === 'credito' && (
+                    <button style={{ ...s.enlace, display: 'block' }} onClick={() => onProgramar(r)}>
+                      {r.cuotas?.length ? 'Cambiar fechas' : 'Poner fecha'}
+                    </button>
+                  )}
                 </td>
-                <td style={{ ...s.td, textAlign: 'right' }}>{money(r.importe)}</td>
+                <td style={{ ...s.td, textAlign: 'right' }}>
+                  {money(r.importe)}
+                  {r.recargo > 0 && <div style={s.sub}>incl. {money(r.recargo)} recargo</div>}
+                </td>
                 <td style={{ ...s.td, textAlign: 'right' }}>{r.pagado > 0 ? money(r.pagado) : '—'}</td>
-                <td style={{ ...s.td, textAlign: 'right', fontWeight: 600 }}>{money(r.saldo)}</td>
+                <td style={{ ...s.td, textAlign: 'right', fontWeight: 600 }}>
+                  {money(r.a_pagar)}
+                  {r.a_pagar < r.saldo - 0.005 && <div style={{ ...s.sub, fontWeight: 400 }}>saldo {money(r.saldo)}</div>}
+                </td>
                 <td style={s.td}><Chip situacion={r.situacion} /></td>
               </tr>
             ))}
@@ -92,6 +105,7 @@ export default function Pagos({ usuario, onCambio }) {
   const [busqueda, setBusqueda] = useState('')
   const [sel, setSel] = useState({})
   const [pagando, setPagando] = useState(null)
+  const [programar, setProgramar] = useState(null)
   const [ordenAbierta, setOrdenAbierta] = useState(null)
   const [version, setVersion] = useState(0)
   const toast = useToast()
@@ -102,7 +116,8 @@ export default function Pagos({ usuario, onCambio }) {
       setDatos(res.data)
       setError('')
       // Lo que ya no está por pagar sale de la selección.
-      const vigentes = new Set([...res.data.semana.ordenes, ...res.data.despues.ordenes].map((r) => r.id))
+      const vigentes = new Set([...res.data.semana.ordenes, ...res.data.despues.ordenes, ...res.data.sin_fecha.ordenes]
+        .map((r) => r.id))
       setSel((x) => Object.fromEntries(Object.entries(x).filter(([id, v]) => v && vigentes.has(id))))
     } catch (e) {
       setError('No se pudieron cargar los pagos pendientes: ' + mensajeError(e))
@@ -177,7 +192,7 @@ export default function Pagos({ usuario, onCambio }) {
         <h2 style={s.h2}>Pagos</h2>
         <p style={s.help}>
           Marca las órdenes que cubre un pago y regístralo una sola vez: puede ser una orden o varias.
-          Arriba va lo que toca pagar esta semana.
+          Arriba va lo que toca pagar esta semana, según las fechas de pago de cada compra.
         </p>
       </div>
       {pestanas}
@@ -202,9 +217,9 @@ export default function Pagos({ usuario, onCambio }) {
     ? filas.filter((r) => String(r.folio).includes(t) || (r.proveedor?.nombre || '').toLowerCase().includes(t)
         || (r.factura || '').toLowerCase().includes(t))
     : filas
-  const todas = [...datos.semana.ordenes, ...datos.despues.ordenes]
+  const todas = [...datos.semana.ordenes, ...datos.despues.ordenes, ...datos.sin_fecha.ordenes]
   const elegidas = todas.filter((r) => sel[r.id])
-  const totalElegido = elegidas.reduce((x, r) => x + r.saldo, 0)
+  const totalElegido = elegidas.reduce((x, r) => x + r.a_pagar, 0)
   const proveedoresElegidos = new Set(elegidas.map((r) => r.proveedor?.id)).size
   const contado = datos.semana.ordenes.filter((r) => r.tipo === 'contado').length
 
@@ -212,8 +227,11 @@ export default function Pagos({ usuario, onCambio }) {
     { titulo: 'Esta semana', valor: money(datos.semana.total),
       pie: `${datos.semana.ordenes.length} orden(es) hasta el ${fechaCorta(datos.fin_semana)}` },
     { titulo: 'Vencido', valor: money(datos.semana.vencido), color: datos.semana.vencido > 0 ? 'var(--pc-rojo)' : null,
-      pie: 'Crédito con el plazo ya cumplido' },
-    { titulo: 'Después', valor: money(datos.despues.total), pie: `${datos.despues.ordenes.length} orden(es) sin urgencia` },
+      pie: 'Pagos programados cuya fecha ya pasó' },
+    { titulo: 'Después', valor: money(datos.despues.saldo), pie: `${datos.despues.ordenes.length} orden(es) con fecha más adelante` },
+    { titulo: 'Sin fecha de pago', valor: money(datos.sin_fecha.saldo),
+      color: datos.sin_fecha.ordenes.length ? 'var(--pc-ambar-texto)' : null,
+      pie: datos.sin_fecha.ordenes.length ? `${datos.sin_fecha.ordenes.length} compra(s) a crédito por programar` : 'Todas tienen fecha' },
   ]
 
   return (
@@ -234,20 +252,25 @@ export default function Pagos({ usuario, onCambio }) {
         value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
 
       <Seccion titulo="Esta semana" grupo={datos.semana} filas={filtrar(datos.semana.ordenes)}
-        ayuda={`Vencidas, las de crédito que vencen a más tardar el domingo ${fechaCorta(datos.fin_semana)}`
+        ayuda={`Pagos vencidos, los que caen a más tardar el domingo ${fechaCorta(datos.fin_semana)}`
           + `${contado ? ` y ${contado} de contado que esperan su pago para comprarse` : ' y las de contado autorizadas'}`}
         vacio={t ? 'Nada de esta semana coincide con la búsqueda.' : 'Nada urgente esta semana.'}
-        sel={sel} alternar={alternar} alternarTodas={alternarTodas} onAbrirOrden={abrirOrden} />
+        sel={sel} alternar={alternar} alternarTodas={alternarTodas} onAbrirOrden={abrirOrden} onProgramar={setProgramar} />
 
       <Seccion titulo="Después" grupo={datos.despues} filas={filtrar(datos.despues.ordenes)}
-        ayuda="Crédito que vence más adelante o sin días de crédito capturados"
-        vacio={t ? 'Nada pendiente coincide con la búsqueda.' : 'No hay más saldos pendientes.'}
-        sel={sel} alternar={alternar} alternarTodas={alternarTodas} onAbrirOrden={abrirOrden} />
+        ayuda="Compras a crédito cuyo siguiente pago cae después del domingo; se muestra lo de ese pago"
+        vacio={t ? 'Nada pendiente coincide con la búsqueda.' : 'No hay pagos programados más adelante.'}
+        sel={sel} alternar={alternar} alternarTodas={alternarTodas} onAbrirOrden={abrirOrden} onProgramar={setProgramar} />
+
+      <Seccion titulo="Sin fecha de pago" grupo={datos.sin_fecha} filas={filtrar(datos.sin_fecha.ordenes)}
+        ayuda="Compras a crédito sin fecha acordada todavía: ponles fecha para que aparezcan en su semana"
+        vacio={t ? 'Nada sin fecha coincide con la búsqueda.' : 'Todas las compras a crédito tienen fecha de pago.'}
+        sel={sel} alternar={alternar} alternarTodas={alternarTodas} onAbrirOrden={abrirOrden} onProgramar={setProgramar} />
 
       {elegidas.length > 0 && (
         <div style={s.barra}>
           <span style={{ flex: 1, minWidth: 200, fontSize: 13.5 }}>
-            <b>{elegidas.length}</b> orden{elegidas.length === 1 ? '' : 'es'} · saldo <b>{money(totalElegido)}</b>
+            <b>{elegidas.length}</b> orden{elegidas.length === 1 ? '' : 'es'} · a pagar <b>{money(totalElegido)}</b>
             {proveedoresElegidos > 1 && <span style={{ color: 'var(--pc-gris)' }}> · {proveedoresElegidos} proveedores</span>}
           </span>
           <button style={s.btnGhost} onClick={() => setSel({})}>Quitar selección</button>
@@ -255,6 +278,12 @@ export default function Pagos({ usuario, onCambio }) {
         </div>
       )}
 
+      {programar && (
+        <Calendario ordenId={programar.id} folio={programar.folio}
+          base={programar.importe - (programar.recargo || 0)} pagado={programar.pagado} cuotas={programar.cuotas || []}
+          onClose={() => setProgramar(null)}
+          onGuardado={() => { setProgramar(null); refrescar() }} />
+      )}
       {pagando && (
         <ModalPago ordenes={pagando} onClose={() => setPagando(null)}
           onHecho={() => { setPagando(null); setSel({}); refrescar() }} />
