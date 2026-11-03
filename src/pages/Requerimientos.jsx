@@ -164,10 +164,11 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
     }
   }
 
-  async function borrarSeleccionados() {
-    const n = seleccionados.length
+  // Solo admin. Sirve para uno (botón del renglón) o para los marcados.
+  async function borrar(lista) {
+    const n = lista.length
     const ok = await confirmar({
-      titulo: `Borrar ${n} requerimiento${n === 1 ? '' : 's'} por completo`,
+      titulo: n === 1 ? `Borrar “${lista[0].descripcion}” por completo` : `Borrar ${n} requerimientos por completo`,
       mensaje: 'Se eliminan de la base de datos y no se pueden recuperar. Úsalo para capturas de prueba o con error; '
         + 'para descartar uno real basta con no generarle orden.',
       textoBoton: 'Borrar definitivamente', peligro: true,
@@ -175,13 +176,14 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
     if (!ok) return
     setBorrando(true)
     try {
-      const { data } = await api.post('/requerimientos/borrar', { ids: seleccionados.map((r) => r.id) })
+      const { data } = await api.post('/requerimientos/borrar', { ids: lista.map((r) => r.id) })
       toast(`Se borraron ${data.borrados} requerimiento(s)`)
       if (data.omitidos?.length) {
         toast(`${data.omitidos.length} no se borraron porque ya están en una orden`
           + `${data.omitidos[0].folio ? ` (#${data.omitidos[0].folio})` : ''}. Bórralos desde la orden.`, 'error')
       }
-      setSel({})
+      const borrados = new Set(lista.map((r) => r.id))
+      setSel((x) => Object.fromEntries(Object.entries(x).filter(([id]) => !borrados.has(id))))
       await recargarReqs()
     } catch (e) {
       toast('No se pudieron borrar: ' + mensajeError(e), 'error')
@@ -221,7 +223,7 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
         <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
           {puedeBorrarTodo(usuario.rol) && nSel > 0 && (
             <button style={{ ...s.btnPeligro, opacity: borrando ? 0.5 : 1 }} disabled={borrando}
-              onClick={borrarSeleccionados} title="Borrar por completo los requerimientos marcados (solo admin)">
+              onClick={() => borrar(seleccionados)} title="Borrar por completo los requerimientos marcados (solo admin)">
               <Trash2 size={15} /> {borrando ? 'Borrando...' : `Borrar (${nSel})`}
             </button>
           )}
@@ -331,10 +333,19 @@ export default function Requerimientos({ usuario, onOrdenCreada, onCambio }) {
                 <td style={{...s.td, textAlign:'right'}}>{money(r.precio_estimado)}</td>
                 {puedeEditar && (
                   <td style={s.td}>
-                    <button style={s.btnGhost}
-                      onClick={() => setEditando({ ...r, proveedor_sug: r.proveedor_sug || '' })}>
-                      <Pencil size={12} /> Editar
-                    </button>
+                    <div style={{ display:'flex', gap:6 }}>
+                      <button style={s.btnGhost}
+                        onClick={() => setEditando({ ...r, proveedor_sug: r.proveedor_sug || '' })}>
+                        <Pencil size={12} /> Editar
+                      </button>
+                      {puedeBorrarTodo(usuario.rol) && (
+                        <button style={s.btnBorrarFila} disabled={borrando} onClick={() => borrar([r])}
+                          title="Borrar este requerimiento por completo (solo admin)"
+                          aria-label={`Borrar el requerimiento ${r.descripcion}`}>
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </div>
                   </td>
                 )}
               </tr>
@@ -630,6 +641,8 @@ const s = {
                 borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
   btnGhostLg: { background:'var(--pc-superficie)', color:'var(--pc-tinta)', border:'1px solid var(--pc-borde)',
                 padding:'10px 16px', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer' },
+  btnBorrarFila: { background:'transparent', border:'1px solid var(--pc-borde)', padding:'5px 8px', borderRadius:7,
+                   cursor:'pointer', color:'var(--pc-rojo)', display:'inline-grid', placeItems:'center' },
   btnPeligro: { background:'var(--pc-superficie)', color:'var(--pc-rojo)', border:'1px solid var(--pc-rojo)',
                 padding:'10px 16px', borderRadius:9, fontSize:14, fontWeight:600, cursor:'pointer',
                 display:'inline-flex', alignItems:'center', gap:6 },
