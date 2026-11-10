@@ -32,6 +32,17 @@ export default function Detalle({ clave, puedeClasificar, onVolver, onCambio, on
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [clave])
 
+  async function agregarTextos(textos) {
+    try {
+      const { data } = await api.post('/precios/clasificar', { textos, insumo_id: datos.articulo.insumo_id })
+      toast(`${data.renglones} compra${data.renglones === 1 ? '' : 's'} agregada${data.renglones === 1 ? '' : 's'} al insumo`)
+      onCambio()
+      await cargar()
+    } catch (e) {
+      toast('Error: ' + mensajeError(e), 'error')
+    }
+  }
+
   async function quitarTexto(texto) {
     const ok = await confirmar({
       titulo: 'Quitar este texto del insumo',
@@ -66,7 +77,7 @@ export default function Detalle({ clave, puedeClasificar, onVolver, onCambio, on
     )
   }
 
-  const { articulo: a, stats: st, facturado, cotizado, umbral } = datos
+  const { articulo: a, stats: st, facturado, cotizado, umbral, mismo_codigo: mismoCodigo = [] } = datos
   const unidad = st.unidad || 'unidad'
   const compras = [...facturado].reverse()
   const enOtraUnidad = facturado.filter((p) => !p.comparable).length
@@ -101,6 +112,41 @@ export default function Detalle({ clave, puedeClasificar, onVolver, onCambio, on
           </div>
         )}
       </div>
+
+      {mismoCodigo.length > 0 && (
+        <section style={s.aviso}>
+          <div style={{ fontWeight: 650, color: 'var(--pc-tinta)' }}>
+            Hay compras que podrían ser este insumo y no se están contando
+          </div>
+          <p style={{ ...base.help, marginTop: 2, maxWidth: 'none' }}>
+            El proveedor las factura con el mismo código que este insumo, pero con otra descripción. Mientras no se
+            agreguen, no salen en la gráfica ni en el precio de referencia.
+          </p>
+          <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+            {mismoCodigo.map((t) => (
+              <div key={t.texto_norm} style={s.texto}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--pc-mono)', fontSize: 12, overflowWrap: 'anywhere' }}>{t.texto_norm}</div>
+                  <div style={base.sub}>
+                    {t.proveedor} · código {t.codigo} · {t.compras} compra{t.compras === 1 ? '' : 's'} · última{' '}
+                    {fechaCorta(t.ultima)} a {precioUnitario(t.ultimo_precio)}{t.unidad ? ` por ${t.unidad}` : ''}
+                  </div>
+                </div>
+                {puedeClasificar && (
+                  <button style={base.btnSecundario} onClick={() => agregarTextos([t.texto_norm])}>Agregar</button>
+                )}
+              </div>
+            ))}
+          </div>
+          {puedeClasificar && mismoCodigo.length > 1 && (
+            <div style={{ marginTop: 10 }}>
+              <button style={base.btnAqua} onClick={() => agregarTextos(mismoCodigo.map((t) => t.texto_norm))}>
+                Agregar los {mismoCodigo.length}
+              </button>
+            </div>
+          )}
+        </section>
+      )}
 
       <div style={s.kpis}>
         <Kpi titulo="Precio de referencia" valor={st.referencia ? precioUnitario(st.referencia) : '—'}
@@ -297,4 +343,5 @@ const s = {
   cardCabeza: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '12px 16px', flexWrap: 'wrap' },
   columnas: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 },
   texto: { display: 'flex', alignItems: 'center', gap: 10, padding: '7px 10px', background: 'var(--pc-superficie-3)', borderRadius: 8 },
+  aviso: { background: 'var(--pc-ambar-bg)', border: '1px solid var(--pc-borde)', borderRadius: 12, padding: '13px 15px', marginBottom: 14 },
 }

@@ -111,7 +111,10 @@ export default function Clasificar({ puedeClasificar, onCambio, onAbrir }) {
                 <div style={{ display: 'grid', gap: 8 }}>
                   {sug && (
                     <div style={{ fontSize: 12.5, color: 'var(--pc-texto-suave)' }}>
-                      ¿Es <b>{sug.nombre}</b>? <span style={base.sub}>({Math.round(sug.parecido * 100)}% parecido)</span>
+                      ¿Es <b>{sug.nombre}</b>?{' '}
+                      <span style={base.sub}>
+                        {sug.codigo ? `(el proveedor usa el mismo código: ${sug.codigo})` : `(${Math.round(sug.parecido * 100)}% parecido)`}
+                      </span>
                     </div>
                   )}
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
