@@ -8,6 +8,8 @@ import { descargarPdfOrden } from './orden/archivos'
 import ModalPago from './pagos/ModalPago'
 import Historial from './pagos/Historial'
 import Calendario from './orden/Calendario'
+import ModalSinOrden from './propago/ModalSinOrden'
+import { exigeCaja, useProPago } from './propago/comun'
 import { s, SITUACION, cuandoVence } from './pagos/estilos'
 
 function Chip({ situacion }) {
@@ -108,6 +110,8 @@ export default function Pagos({ usuario, onCambio }) {
   const [programar, setProgramar] = useState(null)
   const [ordenAbierta, setOrdenAbierta] = useState(null)
   const [version, setVersion] = useState(0)
+  const [sinOrden, setSinOrden] = useState(false)
+  const propago = useProPago()
   const toast = useToast()
 
   const cargar = useCallback(async () => {
@@ -195,8 +199,18 @@ export default function Pagos({ usuario, onCambio }) {
           Arriba va lo que toca pagar esta semana, según las fechas de pago de cada compra.
         </p>
       </div>
-      {pestanas}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        {exigeCaja(propago) && (
+          <button style={s.btnGhost} onClick={() => setSinOrden(true)}>+ Pago sin orden</button>
+        )}
+        {pestanas}
+      </div>
     </div>
+  )
+
+  const modalSinOrden = sinOrden && (
+    <ModalSinOrden estado={propago} onClose={() => setSinOrden(false)}
+      onHecho={() => { setSinOrden(false); refrescar() }} />
   )
 
   if (vista === 'historial') {
@@ -205,11 +219,12 @@ export default function Pagos({ usuario, onCambio }) {
         {encabezado}
         <Historial usuario={usuario} onAbrirOrden={abrirOrden} version={version} onCambio={refrescar} />
         {modalOrden}
+        {modalSinOrden}
       </div>
     )
   }
 
-  if (error) return <div>{encabezado}<div style={s.error}>{error}</div></div>
+  if (error) return <div>{encabezado}<div style={s.error}>{error}</div>{modalSinOrden}</div>
   if (!datos) return <div>{encabezado}<CargaTarjetas n={2} alto={110} minimo={260} /></div>
 
   const t = busqueda.trim().toLowerCase()
@@ -289,6 +304,7 @@ export default function Pagos({ usuario, onCambio }) {
           onHecho={() => { setPagando(null); setSel({}); refrescar() }} />
       )}
       {modalOrden}
+      {modalSinOrden}
     </div>
   )
 }

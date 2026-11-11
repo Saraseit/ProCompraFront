@@ -7,6 +7,8 @@ import { Label } from '../../ui/Modal'
 import { s, bloqueado } from './estilos'
 import BotonArchivo from './BotonArchivo'
 import { ACEPTA_DOCUMENTOS, ACEPTA_FACTURA, subirAdjunto } from './archivos'
+import CampoCaja from '../propago/CampoCaja'
+import { NATURALEZAS, exigeCaja, refrescarProPago, useProPago } from '../propago/comun'
 
 const sumaPagos = (orden) => (orden.pagos || []).reduce((t, p) => t + Number(p.monto || 0), 0)
 
@@ -31,11 +33,18 @@ export function PanelPago({ orden, ejecutar, procesando, toast }) {
     monto: modoCredito ? saldo : Number(orden.total || 0),
   })
   const [comprobante, setComprobante] = useState(null)
+  const propago = useProPago()
+  const [caja, setCaja] = useState(null)
+  const [naturaleza, setNaturaleza] = useState('abono')
   const set = (k, v) => setDatos((d) => ({ ...d, [k]: v }))
+  const elegirCaja = (c) => { setCaja(c); if (c?.metodo) setMetodo(c.metodo) }
+  const conCaja = exigeCaja(propago)
+  const parcial = Number(datos.monto) < saldo - 0.005 || pagado > 0.005
 
   const conEntrega = METODOS_CON_ENTREGA.includes(metodo)
   const faltante =
-    !(Number(datos.monto) > 0) ? 'Captura el monto'
+    conCaja && metodo !== 'credito' && !caja ? 'Elige de qué caja sale el pago'
+    : !(Number(datos.monto) > 0) ? 'Captura el monto'
     : metodo === 'transferencia' && !datos.referencia.trim() ? 'Captura la referencia de la transferencia'
     : conEntrega && !datos.entregado_a.trim() ? 'Indica a quién se le entrega'
     : null
@@ -47,7 +56,17 @@ export function PanelPago({ orden, ejecutar, procesando, toast }) {
   })
 
   const registrar = () => ejecutar('pago', async () => {
-    await api.post(`/ordenes/${orden.id}/pago`, { ...datos, metodo, monto: Number(datos.monto) })
+    if (caja) {
+      // Con ProPago el pago sale de una caja y genera sus registros para el ERP.
+      const { monto, ...comunes } = datos
+      await api.post('/pagos', {
+        ...comunes, metodo, caja_id: caja.id,
+        aplicaciones: [{ orden_id: orden.id, monto: Number(monto), naturaleza: parcial ? naturaleza : 'total' }],
+      })
+      refrescarProPago()
+    } else {
+      await api.post(`/ordenes/${orden.id}/pago`, { ...datos, metodo, monto: Number(datos.monto) })
+    }
     if (comprobante) await subirAdjunto(orden.id, 'comprobante_pago', comprobante)
     toast(conEntrega
       ? `Entrega registrada: ${etiquetaMetodo(metodo).toLowerCase()} para ${datos.entregado_a.trim()}`
@@ -90,6 +109,14 @@ export function PanelPago({ orden, ejecutar, procesando, toast }) {
         </Campo>
 
         {metodo !== 'credito' && (<>
+          <CampoCaja estado={propago} valor={caja?.id} onCambio={elegirCaja} />
+          {caja && parcial && (
+            <Campo label="Tipo de pago">
+              <select style={s.input} value={naturaleza} onChange={(e) => setNaturaleza(e.target.value)}>
+                {NATURALEZAS.map(([k, label]) => <option key={k} value={k}>{label}</option>)}
+              </select>
+            </Campo>
+          )}
           {conEntrega && (
             <Campo label="Entregado a" requerido>
               <input style={s.input} value={datos.entregado_a} placeholder="Quién hará la compra"
