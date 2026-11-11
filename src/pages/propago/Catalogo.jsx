@@ -399,8 +399,8 @@ function Parametros({ parametros, cuentas, onCambio }) {
               {cuentas.filter((c) => c.activa && c.tipo === 'gasto').map((c) => <option key={c.id} value={c.id}>{corto(c)}</option>)}
             </select>
           ) : (
-            <input style={{ ...s.input, width: 140 }} value={valores[p.clave]} aria-label={p.descripcion}
-              onChange={(e) => setValores((v) => ({ ...v, [p.clave]: e.target.value }))} />
+            <input style={{ ...s.input, width: p.clave.startsWith('aviso_') ? 140 : 'min(100%, 560px)' }} value={valores[p.clave]}
+              aria-label={p.descripcion} onChange={(e) => setValores((v) => ({ ...v, [p.clave]: e.target.value }))} />
           )}
           <button style={s.btnGhost} disabled={(valores[p.clave] || '') === (p.valor || '')} onClick={() => guardar(p.clave)}>Guardar</button>
         </div>
