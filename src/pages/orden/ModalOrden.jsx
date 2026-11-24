@@ -351,7 +351,12 @@ export default function ModalOrden({ orden, usuario, onClose, onCambio, onDescar
               </tbody>
               <tfoot>
                 <tr><td colSpan={5} style={{...s.td, textAlign:'right', color:'var(--pc-gris)'}}>Subtotal</td><td style={{...s.td, textAlign:'right'}}>{money(orden.subtotal)}</td></tr>
-                <tr><td colSpan={5} style={{...s.td, textAlign:'right', color:'var(--pc-gris)'}}>IVA 16%</td><td style={{...s.td, textAlign:'right'}}>{money(orden.iva)}</td></tr>
+                {Number(orden.descuento) > 0 && (
+                  <tr><td colSpan={5} style={{...s.td, textAlign:'right', color:'var(--pc-gris)'}}>
+                    Descuento{orden.descuento_tipo === 'porcentaje' ? ` (${Number(orden.descuento_valor)} %)` : ''}
+                  </td><td style={{...s.td, textAlign:'right', color:'var(--pc-verde)'}}>−{money(orden.descuento)}</td></tr>
+                )}
+                <tr><td colSpan={5} style={{...s.td, textAlign:'right', color:'var(--pc-gris)'}}>{orden.con_iva === false ? 'Sin IVA' : 'IVA 16%'}</td><td style={{...s.td, textAlign:'right'}}>{money(orden.iva)}</td></tr>
                 <tr><td colSpan={5} style={{...s.td, textAlign:'right', fontWeight:700}}>Total autorizado</td><td style={{...s.td, textAlign:'right', fontWeight:700}}>{money(orden.total)}</td></tr>
               </tfoot>
             </table>

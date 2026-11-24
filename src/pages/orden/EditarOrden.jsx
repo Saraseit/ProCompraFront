@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, BellRing } from 'lucide-react'
 import api from '../../api'
-import { UNIDADES, money, mensajeError, totalConIva } from '../../constants'
+import { UNIDADES, money, mensajeError, totalesOrden } from '../../constants'
 import Modal, { ModalHead, Label } from '../../ui/Modal'
 import ComboProveedor from '../../ui/ComboProveedor'
 import { useToast } from '../../ui/feedback-context'
@@ -29,6 +29,11 @@ export default function EditarOrden({ orden, onClose, onGuardado }) {
   const [proveedorId, setProveedorId] = useState(orden.proveedor_id)
   const [proveedores, setProveedores] = useState([])
   const [motivo, setMotivo] = useState('')
+  // Descuento e IVA (fase 9). Sin la migración la orden no trae con_iva y no se ofrecen.
+  const conDescuentos = 'con_iva' in orden
+  const [descTipo, setDescTipo] = useState(orden.descuento_tipo || 'ninguno')
+  const [descValor, setDescValor] = useState(orden.descuento_tipo ? String(Number(orden.descuento_valor)) : '')
+  const [conIva, setConIva] = useState(orden.con_iva !== false)
   const [guardando, setGuardando] = useState(false)
   const [intento, setIntento] = useState(false)
   const toast = useToast()
@@ -45,7 +50,9 @@ export default function EditarOrden({ orden, onClose, onGuardado }) {
     setFilas((fs) => fs.map((f) => (f.clave === clave ? { ...f, [campo]: valor } : f)))
   const quitar = (clave) => setFilas((fs) => fs.filter((f) => f.clave !== clave))
 
-  const total = totalConIva(filas)
+  const config = { descuento_tipo: descTipo === 'ninguno' ? null : descTipo, descuento_valor: descValor, con_iva: conIva }
+  const t = totalesOrden(filas, config)
+  const total = t.total
   const diferencia = Math.round((total - Number(orden.total || 0)) * 100) / 100
 
   const errores = []
@@ -55,6 +62,12 @@ export default function EditarOrden({ orden, onClose, onGuardado }) {
     if (!(Number(f.cantidad) > 0)) errores.push(`Partida ${i + 1}: la cantidad debe ser mayor que cero.`)
     if (!(Number(f.precio_unitario) >= 0)) errores.push(`Partida ${i + 1}: el precio no puede ser negativo.`)
   })
+  if (descTipo !== 'ninguno') {
+    const v = Number(descValor)
+    if (descValor === '' || !(v > 0)) errores.push('Captura el descuento o elige «Sin descuento».')
+    else if (descTipo === 'porcentaje' && v > 100) errores.push('El descuento no puede pasar de 100 %.')
+    else if (descTipo === 'importe' && v > t.subtotal) errores.push(`El descuento no puede ser mayor que el subtotal (${money(t.subtotal)}).`)
+  }
   if (!borrador && !motivo.trim()) errores.push('Explica el motivo del cambio.')
   const puede = !errores.length && !guardando
 
@@ -70,6 +83,11 @@ export default function EditarOrden({ orden, onClose, onGuardado }) {
         })),
         motivo: motivo.trim() || null,
         proveedor_id: proveedorId,
+        ...(conDescuentos ? {
+          descuento_tipo: descTipo,
+          descuento_valor: descTipo === 'ninguno' ? 0 : Number(descValor),
+          con_iva: conIva,
+        } : {}),
       })
       toast(borrador ? 'Orden actualizada' : `Orden #${orden.folio} modificada · se avisó a administración y contabilidad`)
       onGuardado()
@@ -82,7 +100,7 @@ export default function EditarOrden({ orden, onClose, onGuardado }) {
   return (
     <Modal onClose={onClose} maxWidth={860} zIndex={70} arriba>
       <ModalHead titulo={`Editar orden #${orden.folio}`}
-        subtitulo="Cambia cantidades, precios o conceptos; agrega o quita partidas." onClose={onClose} />
+        subtitulo="Cambia cantidades, precios, descuento o IVA; agrega o quita partidas." onClose={onClose} />
       <div style={{ ...s.modalBody, gap: 16 }}>
         {!borrador && (
           <div style={s.aviso}>
@@ -156,6 +174,46 @@ export default function EditarOrden({ orden, onClose, onGuardado }) {
           </button>
         </div>
 
+        {conDescuentos && (
+          <div style={e.ajustes}>
+            <div>
+              <Label>Descuento</Label>
+              <div style={e.filaDescuento}>
+                <div style={e.segmento} role="radiogroup" aria-label="Tipo de descuento">
+                  {[['ninguno', 'Sin descuento'], ['importe', 'Importe $'], ['porcentaje', 'Porcentaje %']].map(([k, label]) => (
+                    <button key={k} type="button" role="radio" aria-checked={descTipo === k}
+                      style={{ ...e.segBtn, ...(descTipo === k ? e.segActivo : {}) }}
+                      onClick={() => setDescTipo(k)}>{label}</button>
+                  ))}
+                </div>
+                {descTipo !== 'ninguno' && (
+                  <div style={e.campoValor}>
+                    {descTipo === 'importe' && <span style={e.unidadValor}>$</span>}
+                    <input type="number" min="0" step="any" max={descTipo === 'porcentaje' ? 100 : undefined}
+                      style={{ ...s.inputTabla, width: 120 }} value={descValor} autoFocus
+                      aria-label={descTipo === 'importe' ? 'Descuento en pesos' : 'Descuento en porcentaje'}
+                      placeholder={descTipo === 'importe' ? '0.00' : '0'} onChange={(ev) => setDescValor(ev.target.value)} />
+                    {descTipo === 'porcentaje' && <span style={e.unidadValor}>%</span>}
+                  </div>
+                )}
+              </div>
+            </div>
+            <label style={e.checkIva}>
+              <input type="checkbox" checked={conIva} onChange={(ev) => setConIva(ev.target.checked)} />
+              <span>Lleva IVA 16 %<span style={e.nota}>Desmárcalo si se compra o paga sin IVA</span></span>
+            </label>
+          </div>
+        )}
+
+        <div style={e.desglose}>
+          <span>Subtotal</span><span>{money(t.subtotal)}</span>
+          {t.descuento > 0 && <>
+            <span>Descuento{descTipo === 'porcentaje' ? ` (${Number(descValor)} %)` : ''}</span>
+            <span style={{ color: 'var(--pc-verde)' }}>−{money(t.descuento)}</span>
+          </>}
+          <span>{conIva ? 'IVA 16 %' : 'Sin IVA'}</span><span>{money(t.iva)}</span>
+        </div>
+
         <div style={s.totalesEdicion}>
           <span style={{ color: 'var(--pc-gris)' }}>Total actual {money(orden.total)}</span>
           <span style={{ fontSize: 16, fontWeight: 700 }}>
@@ -186,4 +244,20 @@ export default function EditarOrden({ orden, onClose, onGuardado }) {
       </div>
     </Modal>
   )
+}
+
+// Estilos propios del bloque de descuento e IVA.
+const e = {
+  ajustes: { display: 'flex', gap: 20, flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between' },
+  filaDescuento: { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' },
+  segmento: { display: 'inline-flex', background: 'var(--pc-superficie-3)', borderRadius: 9, padding: 3, gap: 2, flexWrap: 'wrap' },
+  segBtn: { border: 'none', background: 'none', color: 'var(--pc-gris-2)', padding: '6px 12px', borderRadius: 7,
+            fontFamily: 'inherit', fontSize: 12.5, fontWeight: 500, cursor: 'pointer' },
+  segActivo: { background: 'var(--pc-superficie)', color: 'var(--pc-tinta)', boxShadow: 'var(--pc-sombra-1)' },
+  campoValor: { display: 'inline-flex', alignItems: 'center', gap: 6 },
+  unidadValor: { fontSize: 13, color: 'var(--pc-gris)', fontWeight: 600 },
+  checkIva: { display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 13, cursor: 'pointer', paddingBottom: 4 },
+  nota: { display: 'block', fontSize: 11.5, color: 'var(--pc-gris-3)', marginTop: 2 },
+  desglose: { display: 'grid', gridTemplateColumns: 'auto auto', justifyContent: 'end', columnGap: 24, rowGap: 4,
+              fontSize: 13, color: 'var(--pc-gris)', textAlign: 'right', paddingRight: 14 },
 }

@@ -125,8 +125,19 @@ export const isoLocal = (d) =>
 
 export const UNIDADES = ['PZA', 'CAJA', 'LITRO', 'KILO', 'CUBETA', 'BOTE', 'CORTE', 'GALON', 'MTR', 'ROLLO', 'SERVICIO', 'PAQUETE']
 
-// Mismo cálculo que el backend (app/utils/ajustes.py): IVA 16% sobre el subtotal.
-export const totalConIva = (partidas) => {
-  const subtotal = partidas.reduce((s, p) => s + (Number(p.cantidad) || 0) * (Number(p.precio_unitario) || 0), 0)
-  return Math.round(subtotal * 1.16 * 100) / 100
+// Mismo cálculo que el backend (app/utils/ajustes.py): el descuento (importe o
+// porcentaje) se resta del subtotal y el IVA 16 % va sobre lo que queda, salvo
+// que la orden sea sin IVA. `orden` aporta descuento_tipo, descuento_valor y con_iva.
+const centavos = (n) => Math.round((n + Number.EPSILON) * 100) / 100
+
+export const totalesOrden = (partidas, orden = {}) => {
+  const subtotal = centavos(partidas.reduce((s, p) => s + (Number(p.cantidad) || 0) * (Number(p.precio_unitario) || 0), 0))
+  const valor = Number(orden.descuento_valor) || 0
+  const descuento = orden.descuento_tipo === 'porcentaje' ? centavos(subtotal * Math.min(valor, 100) / 100)
+    : orden.descuento_tipo === 'importe' ? Math.min(centavos(valor), subtotal) : 0
+  const base = centavos(subtotal - descuento)
+  const iva = orden.con_iva === false ? 0 : centavos(base * 0.16)
+  return { subtotal, descuento, iva, total: centavos(base + iva) }
 }
+
+export const totalConIva = (partidas, orden) => totalesOrden(partidas, orden).total

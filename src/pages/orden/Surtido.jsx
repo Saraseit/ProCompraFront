@@ -39,7 +39,8 @@ export default function Surtido({ orden, onClose, onHecho }) {
   const invalida = filas.find((f) => f.surtida === '' || Number(f.surtida) < 0 || Number(f.surtida) > f.pedida)
   const nadaSurtido = filas.every((f) => Number(f.surtida) === 0)
 
-  const queda = totalConIva(filas.map((f) => ({ cantidad: f.surtida, precio_unitario: f.precioOriginal })))
+  // La orden original conserva su descuento y su IVA; el complemento nace sin descuento.
+  const queda = totalConIva(filas.map((f) => ({ cantidad: f.surtida, precio_unitario: f.precioOriginal })), orden)
   const complemento = totalConIva(aComplemento.map((f) => ({ cantidad: f.pedida - Number(f.surtida), precio_unitario: f.precio })))
   const provComp = proveedores.find((p) => p.id === proveedorId)
 
